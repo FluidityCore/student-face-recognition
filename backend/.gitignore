@@ -1,0 +1,40 @@
+# Entorno virtual
+.venv/
+venv/
+env/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+
+# Archivos de configuración local
+.env
+.env.local
+
+# Logs
+*.log
+logs/
+
+# Temporales
+temp/
+uploads/
+*.tmp
+
+# IDEs - TODOS estos se ignoran
+.vscode/          # Visual Studio Code
+.idea/            # IntelliJ IDEA/PyCharm
+*.swp             # Vim
+*.swo             # Vim
+.sublime-*        # Sublime Text
+
+# OS
+.DS_Store         # macOS
+Thumbs.db         # Windows
+
+# Base de datos local
+*.db
+*.sqlite3
