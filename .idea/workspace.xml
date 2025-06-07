@@ -5,73 +5,14 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="1295e4c4-eeba-420e-98f1-cf5c132363bd" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/mobile/mobile/.bundle/config" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mobile/mobile/.eslintrc.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mobile/mobile/.gitignore" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mobile/mobile/.prettierrc.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mobile/mobile/.watchmanconfig" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mobile/mobile/App.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mobile/mobile/Gemfile" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mobile/mobile/README.md" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mobile/mobile/__tests__/App.test.tsx" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mobile/mobile/android/app/build.gradle" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mobile/mobile/android/app/debug.keystore" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mobile/mobile/android/app/proguard-rules.pro" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mobile/mobile/android/app/src/debug/AndroidManifest.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mobile/mobile/android/app/src/main/AndroidManifest.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mobile/mobile/android/app/src/main/java/com/studentfacerecognition/MainActivity.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mobile/mobile/android/app/src/main/java/com/studentfacerecognition/MainApplication.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mobile/mobile/android/app/src/main/java/com/studentfacerecognition/MainApplication.kt.backup" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mobile/mobile/android/app/src/main/res/drawable/rn_edit_text_material.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mobile/mobile/android/app/src/main/res/mipmap-hdpi/ic_launcher.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mobile/mobile/android/app/src/main/res/mipmap-hdpi/ic_launcher_round.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mobile/mobile/android/app/src/main/res/mipmap-mdpi/ic_launcher.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mobile/mobile/android/app/src/main/res/mipmap-mdpi/ic_launcher_round.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mobile/mobile/android/app/src/main/res/mipmap-xhdpi/ic_launcher.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mobile/mobile/android/app/src/main/res/mipmap-xhdpi/ic_launcher_round.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mobile/mobile/android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mobile/mobile/android/app/src/main/res/mipmap-xxhdpi/ic_launcher_round.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mobile/mobile/android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mobile/mobile/android/app/src/main/res/mipmap-xxxhdpi/ic_launcher_round.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mobile/mobile/android/app/src/main/res/values/strings.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mobile/mobile/android/app/src/main/res/values/styles.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mobile/mobile/android/build.gradle" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mobile/mobile/android/build.gradle.backup" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mobile/mobile/android/gradle.properties" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mobile/mobile/android/gradle/wrapper/gradle-wrapper.jar" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mobile/mobile/android/gradle/wrapper/gradle-wrapper.properties" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mobile/mobile/android/gradlew" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mobile/mobile/android/gradlew.bat" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mobile/mobile/android/settings.gradle" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mobile/mobile/app.json" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mobile/mobile/babel.config.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mobile/mobile/index.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mobile/mobile/ios/.xcode.env" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mobile/mobile/ios/Podfile" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mobile/mobile/ios/StudentFaceRecognition.xcodeproj/project.pbxproj" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mobile/mobile/ios/StudentFaceRecognition.xcodeproj/xcshareddata/xcschemes/StudentFaceRecognition.xcscheme" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mobile/mobile/ios/StudentFaceRecognition/AppDelegate.swift" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mobile/mobile/ios/StudentFaceRecognition/Images.xcassets/AppIcon.appiconset/Contents.json" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mobile/mobile/ios/StudentFaceRecognition/Images.xcassets/Contents.json" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mobile/mobile/ios/StudentFaceRecognition/Info.plist" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mobile/mobile/ios/StudentFaceRecognition/LaunchScreen.storyboard" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mobile/mobile/ios/StudentFaceRecognition/PrivacyInfo.xcprivacy" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mobile/mobile/jest.config.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mobile/mobile/metro.config.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mobile/mobile/package-lock.json" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mobile/mobile/package.json" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mobile/mobile/src/components/CameraComponent.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mobile/mobile/src/components/LoadingSpinner.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mobile/mobile/src/components/StudentCard.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mobile/mobile/src/navigation/AppNavigator.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mobile/mobile/src/screens/CameraScreen.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mobile/mobile/src/screens/HomeScreen.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mobile/mobile/src/screens/ResultScreen.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mobile/mobile/src/screens/SettingsScreen.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mobile/mobile/src/services/apiService.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mobile/mobile/src/utils/permissions.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mobile/mobile/tsconfig.json" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/app/api/recognition.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend/app/api/recognition.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/app/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend/app/main.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/app/models/database.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend/app/models/database.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/app/services/face_recognition.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend/app/services/face_recognition.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/app/utils/image_processing.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend/app/utils/image_processing.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/models/.gitkeep" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/requirements.txt" beforeDir="false" afterPath="$PROJECT_DIR$/backend/requirements.txt" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -102,6 +43,9 @@
     &quot;accountId&quot;: &quot;05339ded-84a4-47b5-8a55-be30157da275&quot;
   }
 }</component>
+  <component name="HighlightingSettingsPerFile">
+    <setting file="file://$PROJECT_DIR$/backend/bulk_upload_students.py" root0="FORCE_HIGHLIGHTING" />
+  </component>
   <component name="ProjectColorInfo">{
   &quot;customColor&quot;: &quot;&quot;,
   &quot;associatedIndex&quot;: 3
@@ -113,6 +57,9 @@
   </component>
   <component name="PropertiesComponent">{
   &quot;keyToString&quot;: {
+    &quot;Python.bulk_upload_students.executor&quot;: &quot;Run&quot;,
+    &quot;Python.run_server.executor&quot;: &quot;Run&quot;,
+    &quot;Python.setup_database.executor&quot;: &quot;Run&quot;,
     &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
     &quot;git-widget-placeholder&quot;: &quot;main&quot;,
     &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
@@ -125,10 +72,94 @@
     &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
   }
 }</component>
+  <component name="RecentsManager">
+    <key name="MoveFile.RECENT_KEYS">
+      <recent name="C:\Users\bertl\OneDrive\Documentos\Proyectos\student-face-recognition\backend\estudiantes_fotos" />
+    </key>
+  </component>
+  <component name="RunManager" selected="Python.setup_database">
+    <configuration name="bulk_upload_students" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name="student-face-recognition" />
+      <option name="ENV_FILES" value="" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/backend" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/backend/bulk_upload_students.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="run_server" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name="student-face-recognition" />
+      <option name="ENV_FILES" value="" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/backend" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/backend/run_server.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="setup_database" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name="student-face-recognition" />
+      <option name="ENV_FILES" value="" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/backend" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/backend/setup_database.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <recent_temporary>
+      <list>
+        <item itemvalue="Python.setup_database" />
+        <item itemvalue="Python.run_server" />
+        <item itemvalue="Python.bulk_upload_students" />
+      </list>
+    </recent_temporary>
+  </component>
   <component name="SharedIndexes">
     <attachedChunks>
       <set>
-        <option value="bundled-js-predefined-1d06a55b98c1-0b3e54e931b4-JavaScript-WS-241.17890.13" />
+        <option value="bundled-js-predefined-d6986cc7102b-f27c65a3e318-JavaScript-PY-251.23774.444" />
+        <option value="bundled-python-sdk-890ed5b35930-d9c5bdb153f4-com.jetbrains.pycharm.pro.sharedIndexes.bundled-PY-251.23774.444" />
       </set>
     </attachedChunks>
   </component>
@@ -145,11 +176,18 @@
       <workItem from="1749242677448" duration="1648000" />
       <workItem from="1749273132890" duration="2850000" />
       <workItem from="1749277269694" duration="1436000" />
-      <workItem from="1749280864511" duration="256000" />
+      <workItem from="1749280864511" duration="291000" />
+      <workItem from="1749284093017" duration="6696000" />
+      <workItem from="1749323996189" duration="2127000" />
     </task>
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
     <option name="version" value="3" />
+  </component>
+  <component name="com.intellij.coverage.CoverageDataManagerImpl">
+    <SUITE FILE_PATH="coverage/student_face_recognition$setup_database.coverage" NAME="setup_database Coverage Results" MODIFIED="1749288611156" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/backend" />
+    <SUITE FILE_PATH="coverage/student_face_recognition$bulk_upload_students.coverage" NAME="bulk_upload_students Coverage Results" MODIFIED="1749288053070" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/backend" />
+    <SUITE FILE_PATH="coverage/student_face_recognition$run_server.coverage" NAME="run_server Coverage Results" MODIFIED="1749288074707" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/backend" />
   </component>
 </project>

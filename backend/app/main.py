@@ -74,7 +74,7 @@ app = FastAPI(
     Sistema de reconocimiento facial para identificación de estudiantes.
 
     ## Características principales:
-    - Reconocimiento facial con MediaPipe
+    - Reconocimiento facial con face_recognition library
     - Gestión completa de estudiantes (CRUD)
     - Logs y estadísticas de reconocimiento
     - Umbral de reconocimiento configurable (80%)

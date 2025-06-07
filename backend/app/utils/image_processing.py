@@ -146,7 +146,7 @@ class ImageProcessor:
             # Guardar con calidad optimizada
             image.save(processed_path, "JPEG", quality=85, optimize=True)
 
-            return processed_path
+            return image_path
 
         except Exception as e:
             logger.error(f"❌ Error al procesar imagen: {e}")

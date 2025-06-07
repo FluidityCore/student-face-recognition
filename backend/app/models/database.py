@@ -128,7 +128,7 @@ def create_tables():
                 default_configs = [
                     SystemConfig(
                         key="recognition_threshold",
-                        value="0.8",
+                        value="0.9",
                         description="Umbral de similitud para reconocimiento facial"
                     ),
                     SystemConfig(

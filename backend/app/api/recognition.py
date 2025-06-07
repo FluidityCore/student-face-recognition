@@ -167,6 +167,93 @@ async def test_face_detection(image: UploadFile = File(...)):
         raise HTTPException(status_code=500, detail=f"Error en la detección: {str(e)}")
 
 
+@router.post("/debug-similarity")
+async def debug_similarity(
+        image1: UploadFile = File(...),
+        image2: UploadFile = File(...),
+):
+    """
+    Endpoint mejorado para debuggear similitud entre dos imágenes
+    """
+    temp_path1 = None
+    temp_path2 = None
+
+    try:
+        # Validar ambas imágenes
+        if not image_processor.is_valid_image(image1):
+            raise HTTPException(status_code=400, detail="Imagen 1 no válida")
+
+        if not image_processor.is_valid_image(image2):
+            raise HTTPException(status_code=400, detail="Imagen 2 no válida")
+
+        # Guardar ambas imágenes temporalmente
+        temp_path1 = await image_processor.save_image(image1, "test")
+        temp_path2 = await image_processor.save_image(image2, "test")
+
+        # Información adicional sobre las imágenes
+        image1_info = image_processor.get_image_info(temp_path1)
+        image2_info = image_processor.get_image_info(temp_path2)
+
+        # Debuggear comparación
+        debug_result = await face_service.debug_encoding_comparison(temp_path1, temp_path2)
+
+        # Limpiar cualquier valor numpy que pueda quedar
+        def clean_numpy_values(obj):
+            """Convertir valores numpy a tipos Python nativos recursivamente"""
+            if isinstance(obj, dict):
+                return {k: clean_numpy_values(v) for k, v in obj.items()}
+            elif isinstance(obj, list):
+                return [clean_numpy_values(item) for item in obj]
+            elif hasattr(obj, 'item'):  # numpy scalar
+                return obj.item()
+            elif hasattr(obj, 'tolist'):  # numpy array
+                return obj.tolist()
+            else:
+                return obj
+
+        # Limpiar todos los valores
+        debug_result = clean_numpy_values(debug_result)
+        image1_info = clean_numpy_values(image1_info)
+        image2_info = clean_numpy_values(image2_info)
+
+        # Agregar información adicional
+        final_result = {
+            **debug_result,
+            "image1_info": image1_info,
+            "image2_info": image2_info,
+            "images": {
+                "image1_name": str(image1.filename),
+                "image2_name": str(image2.filename),
+                "temp_path1": str(temp_path1),
+                "temp_path2": str(temp_path2)
+            }
+        }
+
+        return final_result
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        import traceback
+        return {
+            "error": str(e),
+            "traceback": traceback.format_exc(),
+            "debug_info": {
+                "endpoint": "debug_similarity",
+                "temp_paths": {
+                    "path1": str(temp_path1) if temp_path1 else None,
+                    "path2": str(temp_path2) if temp_path2 else None
+                }
+            }
+        }
+    finally:
+        # Limpiar archivos temporales
+        for path in [temp_path1, temp_path2]:
+            if path and os.path.exists(path):
+                try:
+                    os.remove(path)
+                except:
+                    pass  # Ignorar errores de limpieza
 @router.get("/health")
 def health_check():
     """
@@ -177,3 +264,86 @@ def health_check():
         "message": "API de reconocimiento facial funcionando correctamente",
         "version": "1.0.0"
     }
+
+
+@router.get("/debug-system")
+async def debug_system():
+    """
+    Endpoint para verificar el estado del sistema de reconocimiento
+    """
+    try:
+        import face_recognition
+        import sys
+        import numpy as np
+
+        # Información del sistema (todo convertido a tipos nativos)
+        system_info = {
+            "python_version": str(sys.version),
+            "face_recognition_available": True,
+            "face_recognition_version": str(getattr(face_recognition, '__version__', 'unknown')),
+            "numpy_version": str(np.__version__),
+        }
+
+        # Verificar si mediapipe está presente
+        try:
+            import mediapipe
+            system_info["mediapipe_present"] = True
+            system_info["mediapipe_version"] = str(mediapipe.__version__)
+            system_info["warning"] = "MediaPipe detectado - podría causar conflictos"
+        except ImportError:
+            system_info["mediapipe_present"] = False
+
+        # Verificar dlib
+        try:
+            import dlib
+            system_info["dlib_available"] = True
+            system_info["dlib_version"] = str(dlib.version)
+        except ImportError:
+            system_info["dlib_available"] = False
+            system_info["dlib_error"] = "dlib no disponible"
+
+        # Probar encoding simple
+        try:
+            # Crear imagen de prueba
+            test_image = np.zeros((200, 200, 3), dtype=np.uint8)
+
+            # Intentar detectar (debería fallar, pero nos dice si la librería funciona)
+            face_locations = face_recognition.face_locations(test_image)
+
+            system_info["face_recognition_test"] = {
+                "test_passed": True,
+                "faces_detected": int(len(face_locations)),
+                "note": "Test con imagen sintética (sin rostro real)"
+            }
+
+        except Exception as e:
+            system_info["face_recognition_test"] = {
+                "test_passed": False,
+                "error": str(e)
+            }
+
+        # Información del servicio
+        service_info = {
+            "recognition_threshold": float(face_service.recognition_threshold),
+            "model": str(face_service.model),
+            "num_jitters": int(face_service.num_jitters)
+        }
+
+        return {
+            "status": "ok",
+            "system_info": system_info,
+            "service_info": service_info,
+            "recommendations": {
+                "if_encodings_44d": "Desinstalar mediapipe: pip uninstall mediapipe",
+                "if_encodings_128d": "Sistema funcionando correctamente",
+                "if_dlib_missing": "Instalar dlib: pip install dlib"
+            }
+        }
+
+    except Exception as e:
+        import traceback
+        return {
+            "status": "error",
+            "error": str(e),
+            "traceback": traceback.format_exc()
+        }
