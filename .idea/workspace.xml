@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="SELECTIVE" />
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="1295e4c4-eeba-420e-98f1-cf5c132363bd" name="Changes" comment="">
+      <change afterPath="$PROJECT_DIR$/backend/app/utils/validators.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/backend/run_server.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/backend/setup_database.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/backend/test_api.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mobile/android/app/src/main/java/com/studentfacerecognition/MainActivity.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mobile/src/components/CameraComponent.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mobile/src/components/LoadingSpinner.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mobile/src/components/StudentCard.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mobile/src/navigation/AppNavigator.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mobile/src/screens/CameraScreen.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mobile/src/screens/HomeScreen.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mobile/src/screens/ResultScreen.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mobile/src/screens/SettingsScreen.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mobile/src/services/apiService.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mobile/src/utils/permissions.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/backend/.gitignore" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/app/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend/app/__init__.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/app/core/__init__.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/app/core/face_matcher.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/app/core/image_processor.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/app/core/student_loader.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/app/database/__init__.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/app/database/connection.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/app/database/models.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/app/routers/__init__.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/app/routers/admin.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/app/routers/recognition.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/app/routers/students.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/config.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/main.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/requirements.txt" beforeDir="false" afterPath="$PROJECT_DIR$/backend/requirements.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/mobile/App.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/mobile/App.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/mobile/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/mobile/README.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/mobile/android/app/build.gradle" beforeDir="false" afterPath="$PROJECT_DIR$/mobile/android/app/build.gradle" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/mobile/android/app/src/main/AndroidManifest.xml" beforeDir="false" afterPath="$PROJECT_DIR$/mobile/android/app/src/main/AndroidManifest.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/mobile/android/app/src/main/java/com/studentfacerecognition/MainActivity.kt" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/mobile/android/app/src/main/java/com/studentfacerecognition/MainApplication.kt" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/mobile/android/build.gradle" beforeDir="false" afterPath="$PROJECT_DIR$/mobile/android/build.gradle" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/mobile/android/gradle.properties" beforeDir="false" afterPath="$PROJECT_DIR$/mobile/android/gradle.properties" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/mobile/android/gradle/wrapper/gradle-wrapper.properties" beforeDir="false" afterPath="$PROJECT_DIR$/mobile/android/gradle/wrapper/gradle-wrapper.properties" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/mobile/android/settings.gradle" beforeDir="false" afterPath="$PROJECT_DIR$/mobile/android/settings.gradle" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/mobile/index.js" beforeDir="false" afterPath="$PROJECT_DIR$/mobile/index.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/mobile/package-lock.json" beforeDir="false" afterPath="$PROJECT_DIR$/mobile/package-lock.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/mobile/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/mobile/package.json" afterDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="FileTemplateManagerImpl">
+    <option name="RECENT_TEMPLATES">
+      <list>
+        <option value="JavaScript File" />
+        <option value="TypeScript File" />
+        <option value="Python Script" />
+      </list>
+    </option>
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="GitHubPullRequestSearchHistory">{
+  &quot;lastFilter&quot;: {
+    &quot;state&quot;: &quot;OPEN&quot;,
+    &quot;assignee&quot;: &quot;LUDAMOCI&quot;
+  }
+}</component>
+  <component name="GithubPullRequestsUISettings">{
+  &quot;selectedUrlAndAccountId&quot;: {
+    &quot;url&quot;: &quot;https://github.com/FluidityCore/student-face-recognition.git&quot;,
+    &quot;accountId&quot;: &quot;05339ded-84a4-47b5-8a55-be30157da275&quot;
+  }
+}</component>
+  <component name="ProjectColorInfo">{
+  &quot;customColor&quot;: &quot;&quot;,
+  &quot;associatedIndex&quot;: 3
+}</component>
+  <component name="ProjectId" id="2y6LZ8HErYN4uLDl22GRrHrUVtW" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;main&quot;,
+    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
+    &quot;prettierjs.PrettierConfiguration.Package&quot;: &quot;C:\\Users\\bertl\\OneDrive\\Documentos\\Proyectos\\student-face-recognition\\mobile\\node_modules\\prettier&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;preferences.pluginManager&quot;,
+    &quot;ts.external.directory.path&quot;: &quot;C:\\Users\\bertl\\OneDrive\\Documentos\\Proyectos\\student-face-recognition\\mobile\\node_modules\\typescript\\lib&quot;,
+    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
+  }
+}</component>
+  <component name="SharedIndexes">
+    <attachedChunks>
+      <set>
+        <option value="bundled-js-predefined-d6986cc7102b-f27c65a3e318-JavaScript-PY-251.23774.444" />
+        <option value="bundled-python-sdk-890ed5b35930-d9c5bdb153f4-com.jetbrains.pycharm.pro.sharedIndexes.bundled-PY-251.23774.444" />
+      </set>
+    </attachedChunks>
+  </component>
+  <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="1295e4c4-eeba-420e-98f1-cf5c132363bd" name="Changes" comment="" />
+      <created>1749150132667</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1749150132667</updated>
+      <workItem from="1749150134094" duration="6444000" />
+      <workItem from="1749157788758" duration="5824000" />
+      <workItem from="1749242677448" duration="1648000" />
+      <workItem from="1749273132890" duration="2850000" />
+      <workItem from="1749277269694" duration="1436000" />
+    </task>
+    <servers />
+  </component>
+  <component name="TypeScriptGeneratedFilesManager">
+    <option name="version" value="3" />
+  </component>
+</project>
