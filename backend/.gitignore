@@ -155,3 +155,4 @@ tmp/
 # Archivos de configuración sensibles
 config.local.py
 secrets.json
+estudiantes_fotos
