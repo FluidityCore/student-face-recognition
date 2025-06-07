@@ -5,14 +5,17 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="1295e4c4-eeba-420e-98f1-cf5c132363bd" name="Changes" comment="">
+      <change afterPath="$PROJECT_DIR$/mobile/src/navigation/AppNavigator.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mobile/src/screens/MenuScreen.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mobile/src/screens/RecognitionScreen.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mobile/src/services/ApiService.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/vcs.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/vcs.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/app/api/recognition.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend/app/api/recognition.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/app/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend/app/main.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/app/models/database.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend/app/models/database.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/app/services/face_recognition.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend/app/services/face_recognition.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/app/utils/image_processing.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend/app/utils/image_processing.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/models/.gitkeep" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/requirements.txt" beforeDir="false" afterPath="$PROJECT_DIR$/backend/requirements.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/mobile/App.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/mobile/App.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/mobile/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/mobile/README.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/mobile/android/app/src/main/java/com/studentfacerecognitionnew/MainActivity.kt" beforeDir="false" afterPath="$PROJECT_DIR$/mobile/android/app/src/main/java/com/studentfacerecognitionnew/MainActivity.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/mobile/package-lock.json" beforeDir="false" afterPath="$PROJECT_DIR$/mobile/package-lock.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/mobile/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/mobile/package.json" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -22,9 +25,9 @@
   <component name="FileTemplateManagerImpl">
     <option name="RECENT_TEMPLATES">
       <list>
-        <option value="JavaScript File" />
         <option value="TypeScript File" />
         <option value="Python Script" />
+        <option value="JavaScript File" />
       </list>
     </option>
   </component>
@@ -66,9 +69,9 @@
     &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
     &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
     &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
-    &quot;prettierjs.PrettierConfiguration.Package&quot;: &quot;C:\\Users\\bertl\\OneDrive\\Documentos\\Proyectos\\student-face-recognition\\mobile\\node_modules\\prettier&quot;,
+    &quot;prettierjs.PrettierConfiguration.Package&quot;: &quot;C:\\Users\\bertl\\OneDrive\\Documentos\\Proyectos\\student-face-recognition\\mobile_corrupt\\node_modules\\prettier&quot;,
     &quot;settings.editor.selected.configurable&quot;: &quot;preferences.pluginManager&quot;,
-    &quot;ts.external.directory.path&quot;: &quot;C:\\Users\\bertl\\OneDrive\\Documentos\\Proyectos\\student-face-recognition\\mobile\\node_modules\\typescript\\lib&quot;,
+    &quot;ts.external.directory.path&quot;: &quot;C:\\Users\\bertl\\OneDrive\\Documentos\\Proyectos\\student-face-recognition\\mobile_corrupt\\node_modules\\typescript\\lib&quot;,
     &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
   }
 }</component>
@@ -77,7 +80,7 @@
       <recent name="C:\Users\bertl\OneDrive\Documentos\Proyectos\student-face-recognition\backend\estudiantes_fotos" />
     </key>
   </component>
-  <component name="RunManager" selected="Python.setup_database">
+  <component name="RunManager">
     <configuration name="bulk_upload_students" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="student-face-recognition" />
       <option name="ENV_FILES" value="" />
@@ -147,19 +150,11 @@
       <option name="INPUT_FILE" value="" />
       <method v="2" />
     </configuration>
-    <recent_temporary>
-      <list>
-        <item itemvalue="Python.setup_database" />
-        <item itemvalue="Python.run_server" />
-        <item itemvalue="Python.bulk_upload_students" />
-      </list>
-    </recent_temporary>
   </component>
   <component name="SharedIndexes">
     <attachedChunks>
       <set>
-        <option value="bundled-js-predefined-d6986cc7102b-f27c65a3e318-JavaScript-PY-251.23774.444" />
-        <option value="bundled-python-sdk-890ed5b35930-d9c5bdb153f4-com.jetbrains.pycharm.pro.sharedIndexes.bundled-PY-251.23774.444" />
+        <option value="bundled-js-predefined-1d06a55b98c1-0b3e54e931b4-JavaScript-WS-241.17890.13" />
       </set>
     </attachedChunks>
   </component>
@@ -179,6 +174,7 @@
       <workItem from="1749280864511" duration="291000" />
       <workItem from="1749284093017" duration="6696000" />
       <workItem from="1749323996189" duration="2127000" />
+      <workItem from="1749326281642" duration="7783000" />
     </task>
     <servers />
   </component>
