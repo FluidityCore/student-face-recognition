@@ -5,50 +5,73 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="1295e4c4-eeba-420e-98f1-cf5c132363bd" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/backend/app/utils/validators.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/backend/run_server.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/backend/setup_database.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/backend/test_api.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mobile/android/app/src/main/java/com/studentfacerecognition/MainActivity.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mobile/src/components/CameraComponent.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mobile/src/components/LoadingSpinner.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mobile/src/components/StudentCard.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mobile/src/navigation/AppNavigator.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mobile/src/screens/CameraScreen.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mobile/src/screens/HomeScreen.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mobile/src/screens/ResultScreen.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mobile/src/screens/SettingsScreen.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mobile/src/services/apiService.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mobile/src/utils/permissions.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/backend/.gitignore" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/app/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend/app/__init__.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/app/core/__init__.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/app/core/face_matcher.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/app/core/image_processor.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/app/core/student_loader.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/app/database/__init__.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/app/database/connection.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/app/database/models.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/app/routers/__init__.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/app/routers/admin.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/app/routers/recognition.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/app/routers/students.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/config.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/main.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/requirements.txt" beforeDir="false" afterPath="$PROJECT_DIR$/backend/requirements.txt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/mobile/App.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/mobile/App.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/mobile/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/mobile/README.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/mobile/android/app/build.gradle" beforeDir="false" afterPath="$PROJECT_DIR$/mobile/android/app/build.gradle" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/mobile/android/app/src/main/AndroidManifest.xml" beforeDir="false" afterPath="$PROJECT_DIR$/mobile/android/app/src/main/AndroidManifest.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/mobile/android/app/src/main/java/com/studentfacerecognition/MainActivity.kt" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/mobile/android/app/src/main/java/com/studentfacerecognition/MainApplication.kt" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/mobile/android/build.gradle" beforeDir="false" afterPath="$PROJECT_DIR$/mobile/android/build.gradle" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/mobile/android/gradle.properties" beforeDir="false" afterPath="$PROJECT_DIR$/mobile/android/gradle.properties" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/mobile/android/gradle/wrapper/gradle-wrapper.properties" beforeDir="false" afterPath="$PROJECT_DIR$/mobile/android/gradle/wrapper/gradle-wrapper.properties" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/mobile/android/settings.gradle" beforeDir="false" afterPath="$PROJECT_DIR$/mobile/android/settings.gradle" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/mobile/index.js" beforeDir="false" afterPath="$PROJECT_DIR$/mobile/index.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/mobile/package-lock.json" beforeDir="false" afterPath="$PROJECT_DIR$/mobile/package-lock.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/mobile/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/mobile/package.json" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mobile/mobile/.bundle/config" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mobile/mobile/.eslintrc.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mobile/mobile/.gitignore" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mobile/mobile/.prettierrc.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mobile/mobile/.watchmanconfig" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mobile/mobile/App.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mobile/mobile/Gemfile" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mobile/mobile/README.md" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mobile/mobile/__tests__/App.test.tsx" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mobile/mobile/android/app/build.gradle" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mobile/mobile/android/app/debug.keystore" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mobile/mobile/android/app/proguard-rules.pro" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mobile/mobile/android/app/src/debug/AndroidManifest.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mobile/mobile/android/app/src/main/AndroidManifest.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mobile/mobile/android/app/src/main/java/com/studentfacerecognition/MainActivity.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mobile/mobile/android/app/src/main/java/com/studentfacerecognition/MainApplication.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mobile/mobile/android/app/src/main/java/com/studentfacerecognition/MainApplication.kt.backup" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mobile/mobile/android/app/src/main/res/drawable/rn_edit_text_material.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mobile/mobile/android/app/src/main/res/mipmap-hdpi/ic_launcher.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mobile/mobile/android/app/src/main/res/mipmap-hdpi/ic_launcher_round.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mobile/mobile/android/app/src/main/res/mipmap-mdpi/ic_launcher.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mobile/mobile/android/app/src/main/res/mipmap-mdpi/ic_launcher_round.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mobile/mobile/android/app/src/main/res/mipmap-xhdpi/ic_launcher.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mobile/mobile/android/app/src/main/res/mipmap-xhdpi/ic_launcher_round.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mobile/mobile/android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mobile/mobile/android/app/src/main/res/mipmap-xxhdpi/ic_launcher_round.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mobile/mobile/android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mobile/mobile/android/app/src/main/res/mipmap-xxxhdpi/ic_launcher_round.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mobile/mobile/android/app/src/main/res/values/strings.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mobile/mobile/android/app/src/main/res/values/styles.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mobile/mobile/android/build.gradle" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mobile/mobile/android/build.gradle.backup" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mobile/mobile/android/gradle.properties" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mobile/mobile/android/gradle/wrapper/gradle-wrapper.jar" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mobile/mobile/android/gradle/wrapper/gradle-wrapper.properties" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mobile/mobile/android/gradlew" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mobile/mobile/android/gradlew.bat" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mobile/mobile/android/settings.gradle" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mobile/mobile/app.json" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mobile/mobile/babel.config.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mobile/mobile/index.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mobile/mobile/ios/.xcode.env" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mobile/mobile/ios/Podfile" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mobile/mobile/ios/StudentFaceRecognition.xcodeproj/project.pbxproj" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mobile/mobile/ios/StudentFaceRecognition.xcodeproj/xcshareddata/xcschemes/StudentFaceRecognition.xcscheme" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mobile/mobile/ios/StudentFaceRecognition/AppDelegate.swift" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mobile/mobile/ios/StudentFaceRecognition/Images.xcassets/AppIcon.appiconset/Contents.json" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mobile/mobile/ios/StudentFaceRecognition/Images.xcassets/Contents.json" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mobile/mobile/ios/StudentFaceRecognition/Info.plist" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mobile/mobile/ios/StudentFaceRecognition/LaunchScreen.storyboard" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mobile/mobile/ios/StudentFaceRecognition/PrivacyInfo.xcprivacy" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mobile/mobile/jest.config.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mobile/mobile/metro.config.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mobile/mobile/package-lock.json" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mobile/mobile/package.json" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mobile/mobile/src/components/CameraComponent.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mobile/mobile/src/components/LoadingSpinner.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mobile/mobile/src/components/StudentCard.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mobile/mobile/src/navigation/AppNavigator.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mobile/mobile/src/screens/CameraScreen.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mobile/mobile/src/screens/HomeScreen.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mobile/mobile/src/screens/ResultScreen.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mobile/mobile/src/screens/SettingsScreen.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mobile/mobile/src/services/apiService.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mobile/mobile/src/utils/permissions.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mobile/mobile/tsconfig.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -105,8 +128,7 @@
   <component name="SharedIndexes">
     <attachedChunks>
       <set>
-        <option value="bundled-js-predefined-d6986cc7102b-f27c65a3e318-JavaScript-PY-251.23774.444" />
-        <option value="bundled-python-sdk-890ed5b35930-d9c5bdb153f4-com.jetbrains.pycharm.pro.sharedIndexes.bundled-PY-251.23774.444" />
+        <option value="bundled-js-predefined-1d06a55b98c1-0b3e54e931b4-JavaScript-WS-241.17890.13" />
       </set>
     </attachedChunks>
   </component>
@@ -123,6 +145,7 @@
       <workItem from="1749242677448" duration="1648000" />
       <workItem from="1749273132890" duration="2850000" />
       <workItem from="1749277269694" duration="1436000" />
+      <workItem from="1749280864511" duration="256000" />
     </task>
     <servers />
   </component>
