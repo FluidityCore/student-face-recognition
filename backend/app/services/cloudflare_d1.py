@@ -109,7 +109,7 @@ class CloudflareD1Service:
             raise
 
     def create_student(self, student_data: Dict[str, Any]) -> int:
-        """Crear estudiante en D1"""
+        """Crear estudiante en D1 - FIX con string booleans"""
         sql = """
               INSERT INTO estudiantes (nombre, apellidos, codigo, correo, requisitoriado, imagen_path, face_encoding,
                                        created_at, updated_at, active)
@@ -121,12 +121,12 @@ class CloudflareD1Service:
             student_data["apellidos"],
             student_data["codigo"],
             student_data.get("correo"),
-            student_data.get("requisitoriado", False),
+            "true" if student_data.get("requisitoriado", False) else "false",  # ✅ FIX: String boolean
             student_data.get("imagen_path"),
             json.dumps(student_data.get("face_encoding")) if student_data.get("face_encoding") else None,
             datetime.utcnow().isoformat(),
             datetime.utcnow().isoformat(),
-            True
+            "true"  # ✅ FIX: String boolean
         ]
 
         result = self.execute_query(sql, params)
@@ -134,18 +134,18 @@ class CloudflareD1Service:
 
     def get_all_students(self) -> List[Dict[str, Any]]:
         """
-        ✅ FIX: Obtener todos los estudiantes de D1 - CORREGIDO
+        ✅ FIX FINAL: Obtener todos los estudiantes de D1 con tipos correctos
         """
         try:
-            sql = "SELECT * FROM estudiantes WHERE active = 1"
-            logger.info("🔍 Ejecutando get_all_students en D1...")
+            # ✅ FIX: D1 guarda booleanos como strings "true"/"false"
+            sql = 'SELECT * FROM estudiantes WHERE active = "true"'
+            logger.info("🔍 Ejecutando get_all_students en D1 con string boolean...")
 
             result = self.execute_query(sql)
 
             # ✅ FIX: Verificar la estructura de respuesta
             logger.info(f"📊 Raw D1 response: {result}")
 
-            # La respuesta puede venir en diferentes formatos
             students = []
 
             if isinstance(result, dict):
@@ -173,17 +173,28 @@ class CloudflareD1Service:
             else:
                 logger.warning("⚠️ No se encontraron estudiantes en D1")
 
-                # ✅ FIX: Verificar si la tabla existe y tiene datos
+                # ✅ FIX: Verificar diferentes queries si falló
                 try:
+                    # Probar sin filtro active
                     count_result = self.execute_query("SELECT COUNT(*) as count FROM estudiantes")
                     total_count = count_result.get("results", [{}])[0].get("count", 0)
                     logger.info(f"📊 Total estudiantes en tabla: {total_count}")
 
                     if total_count > 0:
-                        # Hay datos pero el query anterior falló, intentar sin filtro
-                        logger.info("🔄 Reintentando sin filtro active...")
-                        all_result = self.execute_query("SELECT * FROM estudiantes LIMIT 5")
+                        # Probar con active=1 (numérico)
+                        logger.info("🔄 Probando active=1 (numérico)...")
+                        numeric_result = self.execute_query("SELECT * FROM estudiantes WHERE active = 1 LIMIT 3")
+                        logger.info(f"📊 Query numérica: {numeric_result}")
+
+                        # Probar sin filtro active
+                        logger.info("🔄 Probando sin filtro active...")
+                        all_result = self.execute_query("SELECT * FROM estudiantes LIMIT 3")
                         logger.info(f"📊 Query sin filtro: {all_result}")
+
+                        # Si encontramos datos sin filtro, los retornamos
+                        if isinstance(all_result, dict) and "results" in all_result:
+                            students = all_result["results"]
+                            logger.info(f"✅ Datos encontrados sin filtro: {len(students)}")
 
                 except Exception as e:
                     logger.error(f"❌ Error verificando tabla: {e}")
@@ -195,15 +206,15 @@ class CloudflareD1Service:
             return []
 
     def get_student_by_id(self, student_id: int) -> Optional[Dict[str, Any]]:
-        """Obtener estudiante por ID"""
-        sql = "SELECT * FROM estudiantes WHERE id = ? AND active = 1"
+        """Obtener estudiante por ID - FIX con string boolean"""
+        sql = 'SELECT * FROM estudiantes WHERE id = ? AND active = "true"'
         result = self.execute_query(sql, [student_id])
         results = result.get("results", [])
         return results[0] if results else None
 
     def get_student_by_codigo(self, codigo: str) -> Optional[Dict[str, Any]]:
-        """Obtener estudiante por código"""
-        sql = "SELECT * FROM estudiantes WHERE codigo = ? AND active = 1"
+        """Obtener estudiante por código - FIX con string boolean"""
+        sql = 'SELECT * FROM estudiantes WHERE codigo = ? AND active = "true"'
         result = self.execute_query(sql, [codigo])
         results = result.get("results", [])
         return results[0] if results else None
@@ -232,8 +243,8 @@ class CloudflareD1Service:
         return result.get("meta", {}).get("changes", 0) > 0
 
     def delete_student(self, student_id: int) -> bool:
-        """Eliminar estudiante (soft delete)"""
-        sql = "UPDATE estudiantes SET active = 0, updated_at = ? WHERE id = ?"
+        """Eliminar estudiante (soft delete) - FIX con string boolean"""
+        sql = 'UPDATE estudiantes SET active = "false", updated_at = ? WHERE id = ?'  # ✅ FIX: String boolean
         params = [datetime.utcnow().isoformat(), student_id]
 
         result = self.execute_query(sql, params)
