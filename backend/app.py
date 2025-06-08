@@ -52,11 +52,11 @@ except Exception as e:
 if __name__ == "__main__":
     import uvicorn
 
-    # Configuración para desarrollo directo
-    port = int(os.getenv("PORT", os.getenv("API_PORT", "10000")))
+    # Configuración para servidor (Railway)
+    port = int(os.getenv("PORT", "8000"))  # Railway usa PORT
     host = os.getenv("API_HOST", "0.0.0.0")
 
-    logger.info(f"🚀 Ejecutando en modo desarrollo: {host}:{port}")
+    logger.info(f"🚀 Ejecutando en servidor: {host}:{port}")
 
     uvicorn.run(
         "app:application",
