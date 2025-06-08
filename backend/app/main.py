@@ -223,26 +223,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# CONFIGURAR TRUSTED HOSTS PARA SERVIDOR
-trusted_hosts = ["*"]  # Por defecto permitir todos
-
-# En producción, ser más específico
-if os.getenv("DEBUG", "False") != "True":
-    trusted_hosts = [
-        "localhost",
-        "127.0.0.1",
-        "0.0.0.0",
-    ]
-
-    # Agregar hostname de Railway si está disponible
-    railway_hostname = os.getenv("RAILWAY_PUBLIC_DOMAIN")
-    if railway_hostname:
-        trusted_hosts.append(railway_hostname)
-        trusted_hosts.append(f"*.railway.app")
-
+# CONFIGURAR TRUSTED HOSTS PARA RAILWAY
+# Permitir todos los hosts en Railway (más simple y seguro)
 app.add_middleware(
     TrustedHostMiddleware,
-    allowed_hosts=trusted_hosts
+    allowed_hosts=["*"]  # Permitir todos los dominios de Railway
 )
 
 # COMENTADO TEMPORALMENTE - Middleware original
