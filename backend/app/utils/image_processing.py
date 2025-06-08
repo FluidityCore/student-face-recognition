@@ -163,13 +163,6 @@ class ImageProcessor:
     async def save_image_from_path(self, file_path: str, subfolder: str = "uploads") -> str:
         """
         Subir imagen desde un archivo local a Cloudflare R2
-
-        Args:
-            file_path: Ruta del archivo local
-            subfolder: Subcarpeta en R2 (uploads, reference, recognition, etc.)
-
-        Returns:
-            URL pública de la imagen en Cloudflare R2
         """
         try:
             logger.info(f"📤 Subiendo imagen desde: {file_path}")
@@ -185,8 +178,13 @@ class ImageProcessor:
                     r2_service = CloudflareR2Service()
 
                     if r2_service.is_available():
-                        # Subir desde archivo local
-                        image_url = r2_service.upload_image_from_path(file_path, subfolder)
+                        # ✅ FIX: Leer archivo y usar upload_file (método que SÍ existe)
+                        with open(file_path, 'rb') as f:
+                            file_content = f.read()
+
+                        filename = os.path.basename(file_path)
+                        image_url = r2_service.upload_file(file_content, filename, subfolder)
+
                         logger.info(f"✅ Imagen subida a R2: {image_url}")
                         return image_url
                     else:
