@@ -14,6 +14,9 @@
       <change afterPath="$PROJECT_DIR$/mobile/src/screens/StudentsListScreen.js" afterDir="false" />
       <change afterPath="$PROJECT_DIR$/mobile/src/services/ApiService.js" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/app/api/students.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend/app/api/students.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/app/services/face_recognition.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend/app/services/face_recognition.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/app/utils/image_processing.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend/app/utils/image_processing.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/backend/test_api.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend/test_api.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/mobile/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/mobile/.gitignore" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/mobile/App.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/mobile/App.js" afterDir="false" />
@@ -174,7 +177,8 @@
   <component name="SharedIndexes">
     <attachedChunks>
       <set>
-        <option value="bundled-js-predefined-1d06a55b98c1-0b3e54e931b4-JavaScript-WS-241.17890.13" />
+        <option value="bundled-js-predefined-d6986cc7102b-f27c65a3e318-JavaScript-PY-251.23774.444" />
+        <option value="bundled-python-sdk-890ed5b35930-d9c5bdb153f4-com.jetbrains.pycharm.pro.sharedIndexes.bundled-PY-251.23774.444" />
       </set>
     </attachedChunks>
   </component>
@@ -196,11 +200,23 @@
       <workItem from="1749323996189" duration="2127000" />
       <workItem from="1749326281642" duration="8021000" />
       <workItem from="1749339713418" duration="6487000" />
+      <workItem from="1749401076998" duration="1754000" />
     </task>
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
     <option name="version" value="3" />
+  </component>
+  <component name="Vcs.Log.Tabs.Properties">
+    <option name="TAB_STATES">
+      <map>
+        <entry key="MAIN">
+          <value>
+            <State />
+          </value>
+        </entry>
+      </map>
+    </option>
   </component>
   <component name="com.intellij.coverage.CoverageDataManagerImpl">
     <SUITE FILE_PATH="coverage/student_face_recognition$setup_database.coverage" NAME="setup_database Coverage Results" MODIFIED="1749288611156" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/backend" />

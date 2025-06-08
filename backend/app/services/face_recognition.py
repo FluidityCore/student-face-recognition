@@ -1,9 +1,12 @@
 import face_recognition
 import numpy as np
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict, Any, Union
 import os
 import logging
+import requests
+import tempfile
 from PIL import Image
+import io
 
 from ..models.database import Student
 
@@ -13,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 
 class FaceRecognitionService:
-    """Servicio de reconocimiento facial usando face_recognition library"""
+    """Servicio de reconocimiento facial usando face_recognition library para Railway"""
 
     def __init__(self):
         """Inicializar servicio de reconocimiento facial"""
@@ -33,36 +36,77 @@ class FaceRecognitionService:
             logger.error(f"❌ Error al inicializar FaceRecognition Service: {e}")
             raise
 
-    async def extract_face_encoding(self, image_path: str) -> Optional[np.ndarray]:
+    async def extract_face_encoding(self, image_source: Union[str, bytes, np.ndarray]) -> Optional[np.ndarray]:
         """
-        Extraer encoding facial de una imagen usando face_recognition
-        """
-        try:
-            logger.info(f"🔄 Procesando imagen: {image_path}")
+        Extraer encoding facial de una imagen
 
-            # Cargar imagen
-            image = face_recognition.load_image_file(image_path)
+        Args:
+            image_source: Puede ser:
+                - str: ruta de archivo local o URL de Cloudflare R2
+                - bytes: datos de imagen en bytes
+                - np.ndarray: array de imagen ya cargado
+        """
+        temp_file_path = None
+
+        try:
+            # Determinar el tipo de fuente y preparar para procesamiento
+            if isinstance(image_source, str):
+                if image_source.startswith('http'):
+                    # Es una URL de Cloudflare R2 - descargar primero
+                    logger.info(f"📥 Descargando imagen desde R2: {image_source}")
+                    image_array = await self._download_image_from_url(image_source)
+                else:
+                    # Es un archivo local
+                    logger.info(f"📁 Cargando imagen local: {image_source}")
+                    if not os.path.exists(image_source):
+                        raise FileNotFoundError(f"Archivo no encontrado: {image_source}")
+                    image_array = face_recognition.load_image_file(image_source)
+
+            elif isinstance(image_source, bytes):
+                # Son bytes de imagen - convertir a array numpy
+                logger.info("🔄 Procesando imagen desde bytes")
+                image_pil = Image.open(io.BytesIO(image_source))
+                image_array = np.array(image_pil)
+
+            elif isinstance(image_source, np.ndarray):
+                # Ya es un array numpy
+                logger.info("🔄 Procesando array numpy directo")
+                image_array = image_source
+
+            else:
+                raise ValueError(f"Tipo de imagen no soportado: {type(image_source)}")
+
+            # Verificar que tenemos una imagen válida
+            if image_array is None or image_array.size == 0:
+                logger.error("❌ Array de imagen vacío o inválido")
+                return None
+
+            logger.info(f"🖼️ Imagen cargada: {image_array.shape}")
 
             # Detectar ubicaciones de rostros
-            face_locations = face_recognition.face_locations(image, model="hog")
+            logger.info("🔍 Detectando rostros...")
+            face_locations = face_recognition.face_locations(image_array, model="hog")
 
             if not face_locations:
-                logger.warning(f"❌ No se detectó rostro en: {image_path}")
+                logger.warning(f"❌ No se detectó rostro en la imagen")
                 return None
 
             if len(face_locations) > 1:
                 logger.warning(f"⚠️ Se detectaron {len(face_locations)} rostros, usando el primero")
 
+            logger.info(f"✅ Se detectaron {len(face_locations)} rostro(s)")
+
             # Extraer encodings faciales
+            logger.info("🤖 Extrayendo characteristics faciales...")
             face_encodings = face_recognition.face_encodings(
-                image,
+                image_array,
                 face_locations,
                 num_jitters=self.num_jitters,
                 model=self.model
             )
 
             if not face_encodings:
-                logger.warning(f"❌ No se pudo extraer encoding de: {image_path}")
+                logger.warning(f"❌ No se pudo extraer encoding facial")
                 return None
 
             encoding = face_encodings[0]
@@ -71,8 +115,46 @@ class FaceRecognitionService:
             return encoding
 
         except Exception as e:
-            logger.error(f"❌ Error al extraer encoding de {image_path}: {e}")
+            logger.error(f"❌ Error al extraer encoding: {e}")
             return None
+
+        finally:
+            # Limpiar archivo temporal si se creó
+            if temp_file_path and os.path.exists(temp_file_path):
+                try:
+                    os.remove(temp_file_path)
+                    logger.info(f"🧹 Archivo temporal eliminado: {temp_file_path}")
+                except:
+                    pass
+
+    async def _download_image_from_url(self, url: str) -> np.ndarray:
+        """
+        Descargar imagen desde URL de Cloudflare R2 y convertir a array numpy
+        """
+        try:
+            logger.info(f"📥 Descargando imagen desde: {url}")
+
+            response = requests.get(url, timeout=30)
+            response.raise_for_status()
+
+            if response.status_code != 200:
+                raise Exception(f"Error al descargar imagen: HTTP {response.status_code}")
+
+            # Convertir bytes a imagen PIL y luego a numpy array
+            image_pil = Image.open(io.BytesIO(response.content))
+
+            # Convertir a RGB si es necesario
+            if image_pil.mode != 'RGB':
+                image_pil = image_pil.convert('RGB')
+
+            image_array = np.array(image_pil)
+
+            logger.info(f"✅ Imagen descargada y convertida: {image_array.shape}")
+            return image_array
+
+        except Exception as e:
+            logger.error(f"❌ Error al descargar imagen desde {url}: {e}")
+            raise
 
     async def recognize_face(self, face_encoding: np.ndarray, students: List[Student]) -> Dict[str, Any]:
         """
@@ -334,12 +416,27 @@ class FaceRecognitionService:
                 }
             }
 
-    def verify_face_quality(self, image_path: str) -> Dict[str, Any]:
+    def verify_face_quality(self, image_source: Union[str, bytes, np.ndarray]) -> Dict[str, Any]:
         """
         Verificar calidad de la imagen para reconocimiento facial
         """
         try:
-            image = face_recognition.load_image_file(image_path)
+            # Cargar imagen según el tipo de fuente
+            if isinstance(image_source, str):
+                if image_source.startswith('http'):
+                    # Es URL - usar método async (simplificado para sync)
+                    import asyncio
+                    loop = asyncio.new_event_loop()
+                    asyncio.set_event_loop(loop)
+                    image = loop.run_until_complete(self._download_image_from_url(image_source))
+                else:
+                    image = face_recognition.load_image_file(image_source)
+            elif isinstance(image_source, bytes):
+                image_pil = Image.open(io.BytesIO(image_source))
+                image = np.array(image_pil)
+            else:
+                image = image_source
+
             face_locations = face_recognition.face_locations(image)
 
             if not face_locations:
