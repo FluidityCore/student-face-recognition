@@ -31,7 +31,7 @@ class CloudflareD1Service:
             logger.warning("⚠️ Cloudflare D1 no configurado - usando SQLite local")
 
     def execute_query(self, sql: str, params: List[Any] = None) -> Dict[str, Any]:
-        """Ejecutar query en D1"""
+        """Ejecutar query en D1 - VERSIÓN CORREGIDA"""
         if not self.enabled:
             raise Exception("Cloudflare D1 no está configurado")
 
@@ -56,14 +56,49 @@ class CloudflareD1Service:
 
             if response.status_code == 200:
                 result = response.json()
-                logger.info(f"📊 Response result: {result}")
+                logger.info(f"📊 Full response structure: {result}")
 
                 if result.get("success"):
-                    query_result = result.get("result", [])
-                    if query_result:
-                        return query_result[0] if query_result else {}
+                    # ✅ FIX CRÍTICO: Extraer datos correctamente de la estructura anidada
+                    query_results = result.get("result", [])
+                    logger.info(f"📊 query_results length: {len(query_results)}")
+
+                    if query_results and len(query_results) > 0:
+                        # La estructura real es: result[0].results
+                        first_result = query_results[0]
+                        logger.info(f"📊 first_result structure: {first_result}")
+
+                        if isinstance(first_result, dict) and "results" in first_result:
+                            actual_data = first_result["results"]
+                            meta_data = first_result.get("meta", {})
+
+                            logger.info(
+                                f"✅ Extracted data: {len(actual_data) if isinstance(actual_data, list) else 'not list'} items")
+                            logger.info(
+                                f"📊 Sample data: {actual_data[:2] if isinstance(actual_data, list) else actual_data}")
+
+                            # Retornar en formato consistente
+                            return {
+                                "results": actual_data,
+                                "meta": meta_data,
+                                "success": True
+                            }
+                        else:
+                            # Fallback si la estructura es diferente
+                            logger.warning(f"⚠️ Estructura inesperada en first_result: {type(first_result)}")
+                            return {
+                                "results": [first_result] if first_result else [],
+                                "meta": {},
+                                "success": True
+                            }
                     else:
-                        return {"results": [], "meta": {}}
+                        # Sin resultados
+                        logger.info("📊 No query results found")
+                        return {
+                            "results": [],
+                            "meta": {},
+                            "success": True
+                        }
                 else:
                     raise Exception(f"D1 Error: {result.get('errors', 'Unknown error')}")
             else:
