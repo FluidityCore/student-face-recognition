@@ -635,3 +635,255 @@ async def debug_create_test_student(db: Session = Depends(get_db)):
             "error": str(e),
             "traceback": traceback.format_exc()
         }
+
+
+@router.post("/admin/nuclear-cleanup")
+async def nuclear_cleanup_all_data(
+        confirm_delete_all: bool = False,
+        confirm_password: str = "",
+        db: Session = Depends(get_db)
+):
+    """
+    🚨 NUCLEAR CLEANUP: Eliminar TODOS los datos de D1 y R2
+    CUIDADO: Esta operación es IRREVERSIBLE
+    """
+
+    # Verificación de seguridad
+    expected_password = "DELETE_ALL_DATA_2025"
+
+    if not confirm_delete_all or confirm_password != expected_password:
+        return {
+            "error": "Operación cancelada por seguridad",
+            "instructions": {
+                "confirm_delete_all": "Debe ser true",
+                "confirm_password": f"Debe ser exactamente: {expected_password}",
+                "url_ejemplo": "/admin/nuclear-cleanup?confirm_delete_all=true&confirm_password=DELETE_ALL_DATA_2025"
+            },
+            "warning": "Esta operación eliminará TODOS los estudiantes y sus imágenes PERMANENTEMENTE"
+        }
+
+    try:
+        cleanup_results = {
+            "d1_cleanup": {},
+            "r2_cleanup": {},
+            "total_deleted": {},
+            "warnings": []
+        }
+
+        # 1. LIMPIAR D1 (Base de datos)
+        logger.info("🧹 Iniciando limpieza nuclear de D1...")
+
+        try:
+            if adapter.d1_available:
+                # Contar estudiantes antes
+                students_before = adapter.get_all_students(db)
+                students_count = len(students_before)
+
+                # DELETE ALL estudiantes
+                delete_students_sql = "DELETE FROM estudiantes"
+                result_students = adapter.d1_service.execute_query(delete_students_sql)
+
+                # DELETE ALL logs de reconocimiento
+                delete_logs_sql = "DELETE FROM recognition_logs"
+                result_logs = adapter.d1_service.execute_query(delete_logs_sql)
+
+                # Reset autoincrement counters
+                reset_students_sql = "DELETE FROM sqlite_sequence WHERE name='estudiantes'"
+                reset_logs_sql = "DELETE FROM sqlite_sequence WHERE name='recognition_logs'"
+                adapter.d1_service.execute_query(reset_students_sql)
+                adapter.d1_service.execute_query(reset_logs_sql)
+
+                cleanup_results["d1_cleanup"] = {
+                    "status": "success",
+                    "students_deleted": students_count,
+                    "logs_deleted": result_logs.get("meta", {}).get("changes", 0),
+                    "counters_reset": True
+                }
+
+                logger.info(f"✅ D1 limpiado: {students_count} estudiantes eliminados")
+
+            else:
+                cleanup_results["d1_cleanup"] = {
+                    "status": "skipped",
+                    "reason": "D1 no disponible"
+                }
+
+        except Exception as e:
+            cleanup_results["d1_cleanup"] = {
+                "status": "error",
+                "error": str(e)
+            }
+            logger.error(f"❌ Error limpiando D1: {e}")
+
+        # 2. LIMPIAR R2 (Imágenes)
+        logger.info("🧹 Iniciando limpieza nuclear de R2...")
+
+        try:
+            if adapter.r2_available:
+                r2_service = adapter.r2_service
+
+                # Obtener lista de archivos en ambas carpetas
+                reference_files = r2_service.list_files("reference", limit=1000)
+                recognition_files = r2_service.list_files("recognition", limit=1000)
+
+                deleted_reference = 0
+                deleted_recognition = 0
+
+                # Eliminar archivos de reference/
+                for file_info in reference_files:
+                    try:
+                        if r2_service.delete_file(file_info["public_url"]):
+                            deleted_reference += 1
+                    except Exception as e:
+                        logger.warning(f"⚠️ Error eliminando {file_info['key']}: {e}")
+
+                # Eliminar archivos de recognition/
+                for file_info in recognition_files:
+                    try:
+                        if r2_service.delete_file(file_info["public_url"]):
+                            deleted_recognition += 1
+                    except Exception as e:
+                        logger.warning(f"⚠️ Error eliminando {file_info['key']}: {e}")
+
+                cleanup_results["r2_cleanup"] = {
+                    "status": "success",
+                    "reference_files_deleted": deleted_reference,
+                    "recognition_files_deleted": deleted_recognition,
+                    "total_files_deleted": deleted_reference + deleted_recognition
+                }
+
+                logger.info(f"✅ R2 limpiado: {deleted_reference + deleted_recognition} archivos eliminados")
+
+            else:
+                cleanup_results["r2_cleanup"] = {
+                    "status": "skipped",
+                    "reason": "R2 no disponible"
+                }
+
+        except Exception as e:
+            cleanup_results["r2_cleanup"] = {
+                "status": "error",
+                "error": str(e)
+            }
+            logger.error(f"❌ Error limpiando R2: {e}")
+
+        # 3. VERIFICACIÓN POST-LIMPIEZA
+        try:
+            # Verificar que D1 esté vacío
+            remaining_students = adapter.get_all_students(db)
+
+            cleanup_results["verification"] = {
+                "d1_students_remaining": len(remaining_students),
+                "cleanup_successful": len(remaining_students) == 0
+            }
+
+        except Exception as e:
+            cleanup_results["verification"] = {
+                "error": str(e)
+            }
+
+        # 4. RESUMEN FINAL
+        total_students_deleted = cleanup_results["d1_cleanup"].get("students_deleted", 0)
+        total_files_deleted = cleanup_results["r2_cleanup"].get("total_files_deleted", 0)
+
+        cleanup_results["summary"] = {
+            "operation": "NUCLEAR CLEANUP COMPLETED",
+            "timestamp": time.time(),
+            "total_students_deleted": total_students_deleted,
+            "total_files_deleted": total_files_deleted,
+            "d1_status": cleanup_results["d1_cleanup"]["status"],
+            "r2_status": cleanup_results["r2_cleanup"]["status"],
+            "ready_for_bulk_upload": cleanup_results.get("verification", {}).get("cleanup_successful", False)
+        }
+
+        return {
+            "status": "NUCLEAR CLEANUP COMPLETED",
+            "message": "🚨 TODOS los datos han sido eliminados permanentemente",
+            "results": cleanup_results,
+            "next_steps": {
+                "1": "Verificar que D1 y R2 están vacíos",
+                "2": "Ejecutar tu script bulk_upload_railway.py",
+                "3": "Recargar todos los estudiantes con imágenes",
+                "4": "El sistema estará 100% limpio y funcional"
+            }
+        }
+
+    except Exception as e:
+        return {
+            "status": "NUCLEAR CLEANUP FAILED",
+            "error": str(e),
+            "partial_results": cleanup_results
+        }
+
+
+@router.get("/admin/verify-empty")
+async def verify_system_empty(db: Session = Depends(get_db)):
+    """
+    🔍 Verificar que el sistema esté completamente vacío después de la limpieza
+    """
+    try:
+        verification = {
+            "d1_check": {},
+            "r2_check": {},
+            "summary": {}
+        }
+
+        # Verificar D1
+        try:
+            students = adapter.get_all_students(db)
+
+            # También verificar conteo directo
+            if adapter.d1_available:
+                count_result = adapter.d1_service.execute_query("SELECT COUNT(*) as count FROM estudiantes")
+                direct_count = count_result.get("results", [{}])[0].get("count", 0)
+
+                logs_result = adapter.d1_service.execute_query("SELECT COUNT(*) as count FROM recognition_logs")
+                logs_count = logs_result.get("results", [{}])[0].get("count", 0)
+            else:
+                direct_count = 0
+                logs_count = 0
+
+            verification["d1_check"] = {
+                "students_via_adapter": len(students),
+                "students_direct_count": direct_count,
+                "recognition_logs_count": logs_count,
+                "is_empty": len(students) == 0 and direct_count == 0
+            }
+
+        except Exception as e:
+            verification["d1_check"] = {"error": str(e)}
+
+        # Verificar R2
+        try:
+            if adapter.r2_available:
+                reference_stats = adapter.r2_service.list_files("reference", limit=10)
+                recognition_stats = adapter.r2_service.list_files("recognition", limit=10)
+
+                verification["r2_check"] = {
+                    "reference_files": len(reference_stats),
+                    "recognition_files": len(recognition_stats),
+                    "total_files": len(reference_stats) + len(recognition_stats),
+                    "is_empty": len(reference_stats) == 0 and len(recognition_stats) == 0
+                }
+            else:
+                verification["r2_check"] = {"status": "r2_not_available"}
+
+        except Exception as e:
+            verification["r2_check"] = {"error": str(e)}
+
+        # Resumen
+        d1_empty = verification["d1_check"].get("is_empty", False)
+        r2_empty = verification["r2_check"].get("is_empty", True)  # True si R2 no disponible
+
+        verification["summary"] = {
+            "system_completely_empty": d1_empty and r2_empty,
+            "d1_empty": d1_empty,
+            "r2_empty": r2_empty,
+            "ready_for_bulk_upload": d1_empty and r2_empty,
+            "timestamp": time.time()
+        }
+
+        return verification
+
+    except Exception as e:
+        return {"error": str(e)}
