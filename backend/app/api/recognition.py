@@ -671,7 +671,7 @@ async def nuclear_cleanup_all_data(
         }
 
         # 1. LIMPIAR D1 (Base de datos)
-        logger.info("🧹 Iniciando limpieza nuclear de D1...")
+        print("🧹 Iniciando limpieza nuclear de D1...")
 
         try:
             if adapter.d1_available:
@@ -688,19 +688,23 @@ async def nuclear_cleanup_all_data(
                 result_logs = adapter.d1_service.execute_query(delete_logs_sql)
 
                 # Reset autoincrement counters
-                reset_students_sql = "DELETE FROM sqlite_sequence WHERE name='estudiantes'"
-                reset_logs_sql = "DELETE FROM sqlite_sequence WHERE name='recognition_logs'"
-                adapter.d1_service.execute_query(reset_students_sql)
-                adapter.d1_service.execute_query(reset_logs_sql)
+                try:
+                    reset_students_sql = "DELETE FROM sqlite_sequence WHERE name='estudiantes'"
+                    reset_logs_sql = "DELETE FROM sqlite_sequence WHERE name='recognition_logs'"
+                    adapter.d1_service.execute_query(reset_students_sql)
+                    adapter.d1_service.execute_query(reset_logs_sql)
+                    counters_reset = True
+                except:
+                    counters_reset = False
 
                 cleanup_results["d1_cleanup"] = {
                     "status": "success",
                     "students_deleted": students_count,
                     "logs_deleted": result_logs.get("meta", {}).get("changes", 0),
-                    "counters_reset": True
+                    "counters_reset": counters_reset
                 }
 
-                logger.info(f"✅ D1 limpiado: {students_count} estudiantes eliminados")
+                print(f"✅ D1 limpiado: {students_count} estudiantes eliminados")
 
             else:
                 cleanup_results["d1_cleanup"] = {
@@ -713,10 +717,10 @@ async def nuclear_cleanup_all_data(
                 "status": "error",
                 "error": str(e)
             }
-            logger.error(f"❌ Error limpiando D1: {e}")
+            print(f"❌ Error limpiando D1: {e}")
 
         # 2. LIMPIAR R2 (Imágenes)
-        logger.info("🧹 Iniciando limpieza nuclear de R2...")
+        print("🧹 Iniciando limpieza nuclear de R2...")
 
         try:
             if adapter.r2_available:
@@ -728,6 +732,7 @@ async def nuclear_cleanup_all_data(
 
                 deleted_reference = 0
                 deleted_recognition = 0
+                errors = []
 
                 # Eliminar archivos de reference/
                 for file_info in reference_files:
@@ -735,7 +740,7 @@ async def nuclear_cleanup_all_data(
                         if r2_service.delete_file(file_info["public_url"]):
                             deleted_reference += 1
                     except Exception as e:
-                        logger.warning(f"⚠️ Error eliminando {file_info['key']}: {e}")
+                        errors.append(f"Error eliminando {file_info.get('key', 'unknown')}: {str(e)}")
 
                 # Eliminar archivos de recognition/
                 for file_info in recognition_files:
@@ -743,16 +748,17 @@ async def nuclear_cleanup_all_data(
                         if r2_service.delete_file(file_info["public_url"]):
                             deleted_recognition += 1
                     except Exception as e:
-                        logger.warning(f"⚠️ Error eliminando {file_info['key']}: {e}")
+                        errors.append(f"Error eliminando {file_info.get('key', 'unknown')}: {str(e)}")
 
                 cleanup_results["r2_cleanup"] = {
                     "status": "success",
                     "reference_files_deleted": deleted_reference,
                     "recognition_files_deleted": deleted_recognition,
-                    "total_files_deleted": deleted_reference + deleted_recognition
+                    "total_files_deleted": deleted_reference + deleted_recognition,
+                    "errors": errors
                 }
 
-                logger.info(f"✅ R2 limpiado: {deleted_reference + deleted_recognition} archivos eliminados")
+                print(f"✅ R2 limpiado: {deleted_reference + deleted_recognition} archivos eliminados")
 
             else:
                 cleanup_results["r2_cleanup"] = {
@@ -765,7 +771,7 @@ async def nuclear_cleanup_all_data(
                 "status": "error",
                 "error": str(e)
             }
-            logger.error(f"❌ Error limpiando R2: {e}")
+            print(f"❌ Error limpiando R2: {e}")
 
         # 3. VERIFICACIÓN POST-LIMPIEZA
         try:
