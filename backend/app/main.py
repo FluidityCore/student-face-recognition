@@ -6,6 +6,8 @@ from fastapi.staticfiles import StaticFiles
 import os
 import time
 import logging
+import sys
+import traceback
 from contextlib import asynccontextmanager
 
 # Imports locales
@@ -20,7 +22,7 @@ logging.basicConfig(
     level=getattr(logging, log_level),
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.StreamHandler(),  # Para logs en consola (Render)
+        logging.StreamHandler(),  # Para logs en consola (Railway)
     ]
 )
 logger = logging.getLogger(__name__)
@@ -28,6 +30,15 @@ logger = logging.getLogger(__name__)
 # Variables globales para servicios
 face_service = None
 image_processor = None
+
+# Intentar importar psutil, si no está disponible, continuar sin él
+try:
+    import psutil
+
+    PSUTIL_AVAILABLE = True
+except ImportError:
+    PSUTIL_AVAILABLE = False
+    print("⚠️ psutil no disponible, continuando sin monitoring de memoria")
 
 
 @asynccontextmanager
@@ -87,7 +98,7 @@ app = FastAPI(
     description="""
     Sistema de reconocimiento facial para identificación de estudiantes.
 
-    **🚀 Versión para Servidor - Render + Cloudflare**
+    **🚀 Versión para Servidor - Railway + Cloudflare**
 
     ## Características principales:
     - Reconocimiento facial con face_recognition library
@@ -118,6 +129,69 @@ app = FastAPI(
     docs_url="/docs" if os.getenv("DEBUG", "False") == "True" else "/docs",
     redoc_url="/redoc" if os.getenv("DEBUG", "False") == "True" else "/redoc"
 )
+
+
+# ========================================
+# DEBUG MIDDLEWARE PARA RAILWAY - DEBE IR PRIMERO
+# ========================================
+
+@app.middleware("http")
+async def railway_debug_middleware(request: Request, call_next):
+    """Debug middleware específico para Railway - DEBE IR PRIMERO"""
+    try:
+        # Log básico del request
+        print(f"🔍 RAILWAY DEBUG: {request.method} {request.url.path}")
+        print(f"🔍 Client: {request.client.host if request.client else 'unknown'}")
+        print(f"🔍 User-Agent: {request.headers.get('user-agent', 'unknown')}")
+        sys.stdout.flush()  # Forzar flush de stdout
+
+        # Memoria antes del request (si psutil está disponible)
+        if PSUTIL_AVAILABLE:
+            try:
+                memory_before = psutil.virtual_memory().percent
+                print(f"🧠 Memory before: {memory_before}%")
+            except Exception as mem_error:
+                print(f"🧠 Memory check error: {mem_error}")
+
+        # Log antes de procesar
+        print(f"⏳ Processing request...")
+        sys.stdout.flush()
+
+        # Procesar request
+        response = await call_next(request)
+
+        # Log de éxito
+        print(f"✅ RAILWAY DEBUG: Response {response.status_code}")
+        print(f"✅ Response headers: {dict(response.headers)}")
+        sys.stdout.flush()
+
+        return response
+
+    except Exception as e:
+        # Log detallado del error
+        print(f"❌ RAILWAY ERROR: {str(e)}")
+        print(f"❌ ERROR TYPE: {type(e).__name__}")
+        print(f"❌ ERROR ARGS: {e.args}")
+        print(f"❌ TRACEBACK:")
+        traceback.print_exc()
+        sys.stdout.flush()
+
+        # Devolver error JSON
+        return JSONResponse(
+            status_code=500,
+            content={
+                "error": "Railway Debug Error",
+                "detail": str(e),
+                "type": type(e).__name__,
+                "path": str(request.url.path),
+                "method": request.method
+            }
+        )
+
+
+# ========================================
+# FIN DEBUG MIDDLEWARE
+# ========================================
 
 # CONFIGURAR CORS PARA SERVIDOR
 allowed_origins = [
@@ -160,70 +234,109 @@ if os.getenv("DEBUG", "False") != "True":
         "0.0.0.0",
     ]
 
-    # Agregar hostname de Render si está disponible
-    render_hostname = os.getenv("RENDER_EXTERNAL_HOSTNAME")
-    if render_hostname:
-        trusted_hosts.append(render_hostname)
-        trusted_hosts.append(f"*.onrender.com")
+    # Agregar hostname de Railway si está disponible
+    railway_hostname = os.getenv("RAILWAY_PUBLIC_DOMAIN")
+    if railway_hostname:
+        trusted_hosts.append(railway_hostname)
+        trusted_hosts.append(f"*.railway.app")
 
 app.add_middleware(
     TrustedHostMiddleware,
     allowed_hosts=trusted_hosts
 )
 
-
-# Middleware personalizado para logging y métricas EN SERVIDOR
-@app.middleware("http")
-async def log_requests(request: Request, call_next):
-    """Middleware para logging de requests en servidor"""
-    start_time = time.time()
-
-    # Obtener IP real (considerando proxies de Render)
-    client_ip = request.headers.get("X-Forwarded-For", request.client.host if request.client else "unknown")
-    if "," in client_ip:
-        client_ip = client_ip.split(",")[0].strip()
-
-    # Log request (más detallado en desarrollo)
-    if os.getenv("DEBUG", "False") == "True":
-        logger.info(f"📥 {request.method} {request.url.path} - IP: {client_ip}")
-    else:
-        # En producción, log más simple
-        logger.info(f"{request.method} {request.url.path}")
-
-    try:
-        response = await call_next(request)
-
-        # Calcular tiempo de procesamiento
-        process_time = time.time() - start_time
-
-        # Log response
-        if process_time > 5.0:  # Solo log si tarda más de 5 segundos
-            logger.warning(
-                f"⏱️ SLOW REQUEST: {request.method} {request.url.path} - "
-                f"Time: {process_time:.2f}s - Status: {response.status_code}"
-            )
-        elif os.getenv("DEBUG", "False") == "True":
-            logger.info(
-                f"📤 {request.method} {request.url.path} - "
-                f"Status: {response.status_code} - Time: {process_time:.2f}s"
-            )
-
-        # Agregar headers para servidor
-        response.headers["X-Process-Time"] = str(round(process_time, 2))
-        response.headers["X-Server"] = "Render"
-        response.headers["X-API-Version"] = "1.0.0"
-
-        return response
-
-    except Exception as e:
-        process_time = time.time() - start_time
-        logger.error(f"❌ {request.method} {request.url.path} - Error: {str(e)} - Time: {process_time:.2f}s")
-        raise
-
+# COMENTADO TEMPORALMENTE - Middleware original
+# @app.middleware("http")
+# async def log_requests(request: Request, call_next):
+#     """Middleware para logging de requests en servidor"""
+#     start_time = time.time()
+#
+#     # Obtener IP real (considerando proxies de Railway)
+#     client_ip = request.headers.get("X-Forwarded-For", request.client.host if request.client else "unknown")
+#     if "," in client_ip:
+#         client_ip = client_ip.split(",")[0].strip()
+#
+#     # Log request (más detallado en desarrollo)
+#     if os.getenv("DEBUG", "False") == "True":
+#         logger.info(f"📥 {request.method} {request.url.path} - IP: {client_ip}")
+#     else:
+#         # En producción, log más simple
+#         logger.info(f"{request.method} {request.url.path}")
+#
+#     try:
+#         response = await call_next(request)
+#
+#         # Calcular tiempo de procesamiento
+#         process_time = time.time() - start_time
+#
+#         # Log response
+#         if process_time > 5.0:  # Solo log si tarda más de 5 segundos
+#             logger.warning(
+#                 f"⏱️ SLOW REQUEST: {request.method} {request.url.path} - "
+#                 f"Time: {process_time:.2f}s - Status: {response.status_code}"
+#             )
+#         elif os.getenv("DEBUG", "False") == "True":
+#             logger.info(
+#                 f"📤 {request.method} {request.url.path} - "
+#                 f"Status: {response.status_code} - Time: {process_time:.2f}s"
+#             )
+#
+#         # Agregar headers para servidor
+#         response.headers["X-Process-Time"] = str(round(process_time, 2))
+#         response.headers["X-Server"] = "Railway"
+#         response.headers["X-API-Version"] = "1.0.0"
+#
+#         return response
+#
+#     except Exception as e:
+#         process_time = time.time() - start_time
+#         logger.error(f"❌ {request.method} {request.url.path} - Error: {str(e)} - Time: {process_time:.2f}s")
+#         raise
 
 # Incluir routers
 app.include_router(students.router)
 app.include_router(recognition.router)
+
+
+# Endpoint ultra-simple para testing
+@app.get("/railway-test")
+async def railway_test():
+    """Endpoint súper simple para debug"""
+    try:
+        print("🧪 RAILWAY TEST: Endpoint called")
+        sys.stdout.flush()
+
+        # Test básico de imports
+        import os
+        import time
+
+        result = {
+            "status": "ok",
+            "message": "Railway test successful",
+            "server": "Railway",
+            "timestamp": time.time(),
+            "env_port": os.getenv("PORT", "not_set"),
+            "python_version": sys.version
+        }
+
+        if PSUTIL_AVAILABLE:
+            try:
+                result["memory_percent"] = psutil.virtual_memory().percent
+                result["cpu_percent"] = psutil.cpu_percent()
+            except:
+                result["system_info"] = "psutil error"
+
+        print(f"🧪 Returning: {result}")
+        sys.stdout.flush()
+
+        return result
+
+    except Exception as e:
+        print(f"❌ RAILWAY TEST ERROR: {e}")
+        print(f"❌ TRACEBACK:")
+        traceback.print_exc()
+        sys.stdout.flush()
+        raise
 
 
 # ENDPOINTS ESPECÍFICOS PARA SERVIDOR
@@ -234,7 +347,7 @@ async def root():
         "message": "API de Reconocimiento Facial de Estudiantes",
         "version": "1.0.0",
         "environment": "production" if os.getenv("DEBUG", "False") != "True" else "development",
-        "server": "Render",
+        "server": "Railway",
         "database": "SQLite + Cloudflare D1",
         "storage": "Cloudflare R2" if os.getenv("USE_CLOUDFLARE_R2", "false").lower() == "true" else "Local",
         "status": "active",
@@ -244,7 +357,8 @@ async def root():
             "health": "/health",
             "students": "/api/students",
             "recognize": "/api/recognize",
-            "stats": "/api/recognition/stats"
+            "stats": "/api/recognition/stats",
+            "railway_test": "/railway-test"
         }
     }
 
@@ -273,7 +387,7 @@ async def health_check():
         return {
             "status": overall_status,
             "timestamp": time.time(),
-            "server": "Render",
+            "server": "Railway",
             "environment": "production" if os.getenv("DEBUG", "False") != "True" else "development",
             "services": services_status,
             "database": {
@@ -281,7 +395,7 @@ async def health_check():
                 "type": "SQLite"
             },
             "version": "1.0.0",
-            "uptime": "Available"  # Render maneja el uptime
+            "uptime": "Available"  # Railway maneja el uptime
         }
 
     except Exception as e:
@@ -290,7 +404,7 @@ async def health_check():
             "status": "unhealthy",
             "error": str(e),
             "timestamp": time.time(),
-            "server": "Render"
+            "server": "Railway"
         }
 
 
@@ -324,7 +438,7 @@ async def system_info():
             "system": {
                 "version": "1.0.0",
                 "status": "active",
-                "server": "Render",
+                "server": "Railway",
                 "environment": "production" if os.getenv("DEBUG", "False") != "True" else "development",
                 "recognition_threshold": recognition_threshold,
                 "max_image_size_mb": round(max_image_size / (1024 * 1024), 2),
@@ -355,16 +469,14 @@ async def system_info():
 
 @app.get("/server-status")
 async def server_status():
-    """Estado específico del servidor Render"""
+    """Estado específico del servidor Railway"""
     try:
-        import psutil
         import platform
     except ImportError:
-        psutil = None
         platform = None
 
     status = {
-        "server": "Render",
+        "server": "Railway",
         "api_version": "1.0.0",
         "python_version": platform.python_version() if platform else "Unknown",
         "environment": {
@@ -376,11 +488,12 @@ async def server_status():
             "face_recognition": True,
             "cloudflare_r2": os.getenv("USE_CLOUDFLARE_R2", "false").lower() == "true",
             "cloudflare_d1": os.getenv("USE_CLOUDFLARE_D1", "false").lower() == "true",
-            "sqlite": True
+            "sqlite": True,
+            "psutil": PSUTIL_AVAILABLE
         }
     }
 
-    if psutil:
+    if PSUTIL_AVAILABLE:
         try:
             status["system"] = {
                 "cpu_percent": psutil.cpu_percent(),
@@ -407,7 +520,7 @@ async def cleanup_temp_files(max_age_hours: int = 24):
             "message": "Limpieza completada",
             "deleted_files": deleted_count,
             "max_age_hours": max_age_hours,
-            "server": "Render"
+            "server": "Railway"
         }
 
     except Exception as e:
@@ -428,7 +541,7 @@ async def global_exception_handler(request: Request, exc: Exception):
             "detail": "Ha ocurrido un error inesperado",
             "path": str(request.url.path),
             "method": request.method,
-            "server": "Render",
+            "server": "Railway",
             "timestamp": time.time()
         }
     )
@@ -446,7 +559,7 @@ async def http_exception_handler(request: Request, exc: HTTPException):
             "status_code": exc.status_code,
             "path": str(request.url.path),
             "method": request.method,
-            "server": "Render",
+            "server": "Railway",
             "timestamp": time.time()
         }
     )
@@ -475,6 +588,6 @@ if __name__ == "__main__":
         reload=os.getenv("DEBUG", "False") == "True",
         log_level=os.getenv("LOG_LEVEL", "info").lower(),
         # Configuración específica para servidor
-        workers=1,  # Render Free tier funciona mejor con 1 worker
+        workers=1,  # Railway Free tier funciona mejor con 1 worker
         access_log=os.getenv("DEBUG", "False") == "True"
     )
