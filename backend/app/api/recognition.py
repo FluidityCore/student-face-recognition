@@ -367,3 +367,271 @@ async def debug_system():
             "error": str(e),
             "traceback": traceback.format_exc()
         }
+
+
+@router.get("/debug/system-check")
+async def debug_system_check(db: Session = Depends(get_db)):
+    """
+    🔍 DEBUGGING ENDPOINT - Verificar todo el sistema paso a paso
+    """
+    debug_info = {}
+
+    try:
+        # 1. Verificar variables de entorno
+        debug_info["environment"] = {
+            "USE_CLOUDFLARE_D1": os.getenv("USE_CLOUDFLARE_D1", "not_set"),
+            "CLOUDFLARE_ACCOUNT_ID": "***" + os.getenv("CLOUDFLARE_ACCOUNT_ID", "not_set")[-4:] if os.getenv(
+                "CLOUDFLARE_ACCOUNT_ID") else "not_set",
+            "CLOUDFLARE_API_TOKEN": "***" + os.getenv("CLOUDFLARE_API_TOKEN", "not_set")[-4:] if os.getenv(
+                "CLOUDFLARE_API_TOKEN") else "not_set",
+            "CLOUDFLARE_D1_DATABASE_ID": "***" + os.getenv("CLOUDFLARE_D1_DATABASE_ID", "not_set")[-4:] if os.getenv(
+                "CLOUDFLARE_D1_DATABASE_ID") else "not_set"
+        }
+
+        # 2. Verificar CloudflareAdapter
+        debug_info["cloudflare_adapter"] = {
+            "adapter_created": adapter is not None,
+            "d1_available": adapter.d1_available if adapter else False,
+            "r2_available": adapter.r2_available if adapter else False,
+            "use_d1": adapter.use_d1 if adapter else False,
+            "use_r2": adapter.use_r2 if adapter else False
+        }
+
+        # 3. Verificar D1 Service directamente
+        try:
+            from ..services.cloudflare_d1 import CloudflareD1Service
+            d1_service = CloudflareD1Service()
+
+            debug_info["d1_service"] = {
+                "service_enabled": d1_service.enabled,
+                "test_connection": False,
+                "connection_error": None
+            }
+
+            # Test de conexión
+            try:
+                connection_test = d1_service.test_connection()
+                debug_info["d1_service"]["test_connection"] = connection_test
+
+                # Si la conexión funciona, probar query básico
+                if connection_test:
+                    try:
+                        result = d1_service.execute_query("SELECT name FROM sqlite_master WHERE type='table'")
+                        debug_info["d1_service"]["tables"] = result.get("results", [])
+                    except Exception as e:
+                        debug_info["d1_service"]["query_error"] = str(e)
+
+            except Exception as e:
+                debug_info["d1_service"]["connection_error"] = str(e)
+
+        except ImportError as e:
+            debug_info["d1_service"] = {"import_error": str(e)}
+
+        # 4. Verificar datos directamente
+        debug_info["data_check"] = {}
+
+        # Usar adapter para obtener estudiantes
+        try:
+            students = adapter.get_all_students(db)
+            debug_info["data_check"]["adapter_students_count"] = len(students)
+            debug_info["data_check"]["adapter_students_sample"] = students[:2] if students else []
+        except Exception as e:
+            debug_info["data_check"]["adapter_error"] = str(e)
+
+        # Usar service directo para comparar
+        try:
+            from ..services.database_service import StudentService
+            student_service = StudentService()
+            sqlite_students = student_service.get_all_students(db)
+            debug_info["data_check"]["sqlite_students_count"] = len(sqlite_students)
+        except Exception as e:
+            debug_info["data_check"]["sqlite_error"] = str(e)
+
+        # 5. Verificar database configuration
+        try:
+            from ..models.database import get_database_type, is_d1_enabled, get_database_configuration
+            debug_info["database_config"] = {
+                "database_type": get_database_type(),
+                "d1_enabled": is_d1_enabled(),
+                "config": get_database_configuration()
+            }
+        except Exception as e:
+            debug_info["database_config"] = {"error": str(e)}
+
+        return {
+            "status": "debug_complete",
+            "timestamp": time.time(),
+            "debug_info": debug_info
+        }
+
+    except Exception as e:
+        return {
+            "status": "debug_error",
+            "error": str(e),
+            "partial_debug_info": debug_info
+        }
+
+
+@router.get("/debug/test-d1-direct")
+async def debug_test_d1_direct():
+    """
+    🔍 DEBUGGING - Test directo de D1 sin adapter
+    """
+    try:
+        from ..services.cloudflare_d1 import CloudflareD1Service
+        d1_service = CloudflareD1Service()
+
+        if not d1_service.enabled:
+            return {
+                "error": "D1 service not enabled",
+                "account_id": bool(os.getenv("CLOUDFLARE_ACCOUNT_ID")),
+                "api_token": bool(os.getenv("CLOUDFLARE_API_TOKEN")),
+                "database_id": bool(os.getenv("CLOUDFLARE_D1_DATABASE_ID"))
+            }
+
+        # Test de conexión
+        connection_ok = d1_service.test_connection()
+        if not connection_ok:
+            return {"error": "D1 connection failed"}
+
+        # Listar tablas
+        tables_result = d1_service.execute_query("SELECT name FROM sqlite_master WHERE type='table'")
+        tables = [row.get("name") for row in tables_result.get("results", [])]
+
+        # Contar estudiantes en D1
+        if "estudiantes" in tables:
+            count_result = d1_service.execute_query("SELECT COUNT(*) as count FROM estudiantes")
+            student_count = count_result.get("results", [{}])[0].get("count", 0)
+
+            # Obtener sample de estudiantes
+            sample_result = d1_service.execute_query("SELECT id, nombre, apellidos, codigo FROM estudiantes LIMIT 3")
+            sample_students = sample_result.get("results", [])
+        else:
+            student_count = 0
+            sample_students = []
+
+        return {
+            "status": "d1_direct_test_ok",
+            "connection": connection_ok,
+            "tables": tables,
+            "student_count": student_count,
+            "sample_students": sample_students
+        }
+
+    except Exception as e:
+        import traceback
+        return {
+            "status": "d1_direct_test_error",
+            "error": str(e),
+            "traceback": traceback.format_exc()
+        }
+
+
+@router.get("/debug/test-adapter-step-by-step")
+async def debug_test_adapter_step_by_step(db: Session = Depends(get_db)):
+    """
+    🔍 DEBUGGING - Test del adapter paso a paso
+    """
+    debug_steps = {}
+
+    try:
+        # Paso 1: Crear adapter
+        debug_steps["step1_create_adapter"] = "ok"
+
+        # Paso 2: Verificar propiedades
+        debug_steps["step2_adapter_properties"] = {
+            "use_d1": adapter.use_d1,
+            "use_r2": adapter.use_r2,
+            "d1_available": adapter.d1_available,
+            "r2_available": adapter.r2_available
+        }
+
+        # Paso 3: Test del método get_all_students
+        try:
+            students = adapter.get_all_students(db)
+            debug_steps["step3_get_students"] = {
+                "status": "ok",
+                "count": len(students),
+                "sample": students[:2] if students else []
+            }
+        except Exception as e:
+            debug_steps["step3_get_students"] = {
+                "status": "error",
+                "error": str(e)
+            }
+
+        # Paso 4: Verificar qué servicio se está usando
+        debug_steps["step4_service_check"] = {}
+
+        if adapter.d1_available:
+            debug_steps["step4_service_check"]["using"] = "cloudflare_d1"
+            try:
+                d1_students = adapter.d1_service.get_all_students()
+                debug_steps["step4_service_check"]["d1_direct"] = {
+                    "count": len(d1_students),
+                    "sample": d1_students[:2] if d1_students else []
+                }
+            except Exception as e:
+                debug_steps["step4_service_check"]["d1_error"] = str(e)
+        else:
+            debug_steps["step4_service_check"]["using"] = "sqlite_fallback"
+            try:
+                sqlite_students = adapter.student_service.get_all_students(db)
+                debug_steps["step4_service_check"]["sqlite_direct"] = {
+                    "count": len(sqlite_students),
+                    "sample": [s.__dict__ for s in sqlite_students[:2]]
+                }
+            except Exception as e:
+                debug_steps["step4_service_check"]["sqlite_error"] = str(e)
+
+        return {
+            "status": "adapter_debug_complete",
+            "debug_steps": debug_steps
+        }
+
+    except Exception as e:
+        import traceback
+        return {
+            "status": "adapter_debug_error",
+            "error": str(e),
+            "traceback": traceback.format_exc(),
+            "completed_steps": debug_steps
+        }
+
+
+@router.post("/debug/create-test-student")
+async def debug_create_test_student(db: Session = Depends(get_db)):
+    """
+    🔍 DEBUGGING - Crear estudiante de prueba para verificar funcionamiento
+    """
+    try:
+        test_student_data = {
+            "nombre": "Test",
+            "apellidos": "Debug Student",
+            "codigo": f"DEBUG{int(time.time())}",
+            "correo": "debug@test.com",
+            "requisitoriado": False,
+            "imagen_path": None,
+            "face_encoding": None
+        }
+
+        # Test usando adapter
+        result = adapter.create_student(db, test_student_data, None)
+
+        # Verificar que se creó
+        verification = adapter.get_all_students(db)
+
+        return {
+            "status": "test_student_created",
+            "created_student": result,
+            "total_students_after": len(verification),
+            "test_data": test_student_data
+        }
+
+    except Exception as e:
+        import traceback
+        return {
+            "status": "test_student_error",
+            "error": str(e),
+            "traceback": traceback.format_exc()
+        }
