@@ -27,8 +27,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copiar código
 COPY . .
 
-# Exponer puerto
-EXPOSE 8000
+# Exponer puerto (Railway asigna dinámicamente)
+EXPOSE $PORT
 
-# Comando de inicio
-CMD ["gunicorn", "app:application", "-w", "1", "-k", "uvicorn.workers.UvicornWorker", "--bind", "0.0.0.0:8000", "--timeout", "300"]
+# Comando de inicio (usando shell para expandir $PORT)
+CMD ["sh", "-c", "gunicorn app:application -w 1 -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:$PORT --timeout 300"]
