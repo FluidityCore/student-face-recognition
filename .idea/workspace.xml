@@ -14,9 +14,6 @@
       <change afterPath="$PROJECT_DIR$/mobile/src/screens/StudentsListScreen.js" afterDir="false" />
       <change afterPath="$PROJECT_DIR$/mobile/src/services/ApiService.js" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/app/api/students.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend/app/api/students.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/app/services/face_recognition.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend/app/services/face_recognition.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/app/utils/image_processing.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend/app/utils/image_processing.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/backend/test_api.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend/test_api.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/mobile/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/mobile/.gitignore" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/mobile/App.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/mobile/App.js" afterDir="false" />
@@ -200,7 +197,7 @@
       <workItem from="1749323996189" duration="2127000" />
       <workItem from="1749326281642" duration="8021000" />
       <workItem from="1749339713418" duration="6487000" />
-      <workItem from="1749401076998" duration="1754000" />
+      <workItem from="1749401076998" duration="3294000" />
     </task>
     <servers />
   </component>
