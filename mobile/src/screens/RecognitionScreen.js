@@ -21,7 +21,7 @@ const RecognitionScreen = () => {
     const handleStartRecognition = () => {
         Alert.alert(
             'Seleccionar Foto',
-            'Elige una opción',
+            'Elige una opción para capturar o seleccionar la imagen',
             [
                 { text: 'Cámara', onPress: openCamera },
                 { text: 'Galería', onPress: openGallery },
@@ -34,6 +34,8 @@ const RecognitionScreen = () => {
         const options = {
             mediaType: 'photo',
             quality: 0.8,
+            maxWidth: 1024,
+            maxHeight: 1024,
             includeBase64: false,
         };
 
@@ -44,6 +46,8 @@ const RecognitionScreen = () => {
         const options = {
             mediaType: 'photo',
             quality: 0.8,
+            maxWidth: 1024,
+            maxHeight: 1024,
             includeBase64: false,
         };
 
@@ -51,125 +55,240 @@ const RecognitionScreen = () => {
     };
 
     const handleImageResponse = (response) => {
-        if (response.didCancel || response.error) {
+        if (response.didCancel) {
+            console.log('Usuario canceló la selección de imagen');
+            return;
+        }
+
+        if (response.error) {
+            console.error('Error al seleccionar imagen:', response.error);
+            Alert.alert('Error', 'No se pudo seleccionar la imagen');
             return;
         }
 
         if (response.assets && response.assets[0]) {
             const imageFile = response.assets[0];
+            console.log('Imagen seleccionada:', imageFile);
+
             setSelectedImage(imageFile);
             setResult(null);
 
-            // Iniciar reconocimiento automáticamente
+            // ✅ Iniciar reconocimiento automáticamente
             recognizeImage(imageFile);
         }
     };
 
     const recognizeImage = async (imageFile) => {
         setLoading(true);
-        try {
-            console.log('Iniciando reconocimiento...');
-            const response = await ApiService.recognizeStudent(imageFile);
-            console.log('Resultado del reconocimiento:', response);
 
+        try {
+            console.log('🚀 Iniciando proceso de reconocimiento facial...');
+
+            // ✅ Mostrar progreso al usuario
+            Alert.alert(
+                'Procesando...',
+                'Analizando la imagen. Esto puede tomar hasta 2 minutos.',
+                [{ text: 'OK' }]
+            );
+
+            const response = await ApiService.recognizeStudent(imageFile);
+
+            console.log('✅ Resultado del reconocimiento:', response);
             setResult(response);
 
-            // Verificar múltiples campos para determinar si fue exitoso
-            const isFound = response.found || response.success || (response.student && response.student.nombre);
+            // ✅ Determinar si se encontró un estudiante
+            const isFound = response.found || false;
 
             if (isFound && response.student) {
-                const studentName = response.student.nombre || response.student.name || 'Nombre no disponible';
-                const studentEmail = response.student.email || response.student.correo || 'Sin email';
+                const student = response.student;
                 const similarity = response.similarity ? (response.similarity * 100).toFixed(1) : 'N/A';
 
                 Alert.alert(
-                    '✅ Estudiante Encontrado',
-                    `👤 ${studentName}\n📧 ${studentEmail}\n🎯 Similitud: ${similarity}%`
+                    '✅ Estudiante Identificado',
+                    `👤 ${student.nombre} ${student.apellidos}\n` +
+                    `🆔 Código: ${student.codigo}\n` +
+                    `📧 ${student.correo}\n` +
+                    `🎯 Similitud: ${similarity}%\n` +
+                    `${student.requisitoriado ? '\n⚠️ ESTUDIANTE REQUISITORIADO' : ''}`,
+                    [{ text: 'OK' }]
                 );
+
+                // ✅ Si está requisitoriado, mostrar alerta adicional
+                if (student.requisitoriado) {
+                    setTimeout(() => {
+                        Alert.alert(
+                            '🚨 ALERTA DE SEGURIDAD',
+                            `El estudiante ${student.nombre} ${student.apellidos} está marcado como REQUISITORIADO.\n\nContactar seguridad inmediatamente.`,
+                            [{ text: 'Entendido', style: 'destructive' }]
+                        );
+                    }, 1000);
+                }
             } else {
-                const message = response.message || 'No se encontró ningún estudiante con ese rostro';
                 Alert.alert(
                     '❌ No Encontrado',
-                    message
+                    response.message || 'No se encontró ningún estudiante que coincida con el rostro en la imagen.',
+                    [{ text: 'OK' }]
                 );
             }
+
         } catch (error) {
-            console.error('Error completo:', error);
+            console.error('❌ Error completo en reconocimiento:', error);
+
             Alert.alert(
-                'Error de Conexión',
-                `No se pudo conectar al servidor.\n\nDetalles: ${error.message || 'Error desconocido'}`
+                'Error de Reconocimiento',
+                error.message || 'No se pudo procesar la imagen. Verifica tu conexión e intenta nuevamente.',
+                [
+                    { text: 'Reintentar', onPress: () => recognizeImage(imageFile) },
+                    { text: 'Cancelar', style: 'cancel' }
+                ]
             );
+
         } finally {
             setLoading(false);
         }
     };
 
+    const resetRecognition = () => {
+        setSelectedImage(null);
+        setResult(null);
+    };
+
     return (
         <SafeAreaView style={styles.container}>
-            <ScrollView contentContainerStyle={styles.content}>
-                <Text style={styles.title}>🎓 Reconocimiento Facial</Text>
-                <Text style={styles.subtitle}>Sistema de Estudiantes</Text>
+            <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
 
+                {/* Header */}
+                <View style={styles.header}>
+                    <Text style={styles.title}>🔍 Reconocimiento Facial</Text>
+                    <Text style={styles.subtitle}>Sistema de Identificación de Estudiantes</Text>
+                </View>
+
+                {/* Status del servidor */}
+                <View style={styles.statusContainer}>
+                    <Text style={styles.statusText}>
+                        🌐 Conectado a: {ApiService.getApiBaseUrl().includes('railway') ? 'Railway Cloud' : 'Servidor Local'}
+                    </Text>
+                </View>
+
+                {/* Botón principal */}
                 <TouchableOpacity
-                    style={styles.button}
+                    style={[styles.mainButton, loading && styles.disabledButton]}
                     onPress={handleStartRecognition}
                     disabled={loading}
                 >
                     {loading ? (
-                        <ActivityIndicator color="#fff" />
+                        <View style={styles.loadingContainer}>
+                            <ActivityIndicator color="#fff" size="large" />
+                            <Text style={styles.loadingText}>Procesando...</Text>
+                        </View>
                     ) : (
                         <Text style={styles.buttonText}>📷 Iniciar Reconocimiento</Text>
                     )}
                 </TouchableOpacity>
 
+                {/* Imagen seleccionada */}
                 {selectedImage && (
-                    <View style={styles.imageContainer}>
-                        <Text style={styles.imageTitle}>Imagen seleccionada:</Text>
-                        <Image source={{ uri: selectedImage.uri }} style={styles.image} />
-                    </View>
-                )}
-
-                {result && (
-                    <View style={styles.resultContainer}>
-                        <Text style={styles.resultTitle}>
-                            {(result.found || result.success || (result.student && result.student.nombre)) ? '✅ Resultado' : '❌ Sin coincidencias'}
-                        </Text>
-
-                        {(result.found || result.success || (result.student && result.student.nombre)) ? (
-                            <View style={styles.studentInfo}>
-                                <Text style={styles.studentName}>
-                                    {result.student?.nombre || result.student?.name || 'Nombre no disponible'}
-                                </Text>
-                                <Text style={styles.studentDetail}>
-                                    📧 {result.student?.email || result.student?.correo || 'Sin email'}
-                                </Text>
-                                {result.student?.id && (
-                                    <Text style={styles.studentDetail}>
-                                        🆔 ID: {result.student.id}
-                                    </Text>
-                                )}
-                                <Text style={styles.confidence}>
-                                    🎯 Similitud: {result.similarity ? (result.similarity * 100).toFixed(1) : 'N/A'}%
-                                </Text>
-                                <Text style={styles.confidence}>
-                                    💪 Confianza: {result.confidence || 'N/A'}
-                                </Text>
-                            </View>
-                        ) : (
-                            <Text style={styles.noResult}>
-                                {result.message || 'No se encontró coincidencia en la base de datos'}
-                            </Text>
-                        )}
-
-                        {/* Debug info - puedes comentar esto después */}
-                        <View style={styles.debugContainer}>
-                            <Text style={styles.debugTitle}>Debug Info:</Text>
-                            <Text style={styles.debugText}>
-                                {JSON.stringify(result, null, 2)}
-                            </Text>
+                    <View style={styles.imageSection}>
+                        <Text style={styles.sectionTitle}>📸 Imagen Seleccionada:</Text>
+                        <View style={styles.imageContainer}>
+                            <Image source={{ uri: selectedImage.uri }} style={styles.selectedImage} />
+                            {!loading && (
+                                <TouchableOpacity style={styles.resetButton} onPress={resetRecognition}>
+                                    <Text style={styles.resetButtonText}>🔄 Cambiar Imagen</Text>
+                                </TouchableOpacity>
+                            )}
                         </View>
                     </View>
                 )}
+
+                {/* Progreso de carga */}
+                {loading && (
+                    <View style={styles.progressSection}>
+                        <Text style={styles.progressTitle}>⏳ Procesando imagen...</Text>
+                        <Text style={styles.progressSubtitle}>
+                            • Detectando rostro en la imagen{'\n'}
+                            • Comparando con base de datos{'\n'}
+                            • Calculando similitudes{'\n'}
+                            • Esto puede tomar hasta 2 minutos
+                        </Text>
+                    </View>
+                )}
+
+                {/* Resultado del reconocimiento */}
+                {result && !loading && (
+                    <View style={styles.resultSection}>
+                        <Text style={styles.sectionTitle}>
+                            {result.found ? '✅ Resultado Exitoso' : '❌ Sin Coincidencias'}
+                        </Text>
+
+                        {result.found && result.student ? (
+                            <View style={[
+                                styles.studentCard,
+                                result.student.requisitoriado && styles.alertCard
+                            ]}>
+                                {result.student.requisitoriado && (
+                                    <View style={styles.alertBanner}>
+                                        <Text style={styles.alertText}>🚨 REQUISITORIADO</Text>
+                                    </View>
+                                )}
+
+                                <Text style={styles.studentName}>
+                                    {result.student.nombre} {result.student.apellidos}
+                                </Text>
+
+                                <View style={styles.studentDetails}>
+                                    <Text style={styles.studentDetail}>🆔 Código: {result.student.codigo}</Text>
+                                    <Text style={styles.studentDetail}>📧 {result.student.correo}</Text>
+                                    <Text style={styles.studentDetail}>
+                                        🎯 Similitud: {result.similarity ? (result.similarity * 100).toFixed(1) : 'N/A'}%
+                                    </Text>
+                                    <Text style={styles.studentDetail}>
+                                        💪 Confianza: {result.confidence || 'Media'}
+                                    </Text>
+                                    {result.processing_time && (
+                                        <Text style={styles.studentDetail}>
+                                            ⏱️ Tiempo: {result.processing_time.toFixed(2)}s
+                                        </Text>
+                                    )}
+                                </View>
+                            </View>
+                        ) : (
+                            <View style={styles.noResultCard}>
+                                <Text style={styles.noResultTitle}>No se encontró coincidencia</Text>
+                                <Text style={styles.noResultText}>
+                                    {result.message || 'El rostro no coincide con ningún estudiante registrado en la base de datos.'}
+                                </Text>
+                                {result.similarity && (
+                                    <Text style={styles.similarityText}>
+                                        Mejor coincidencia: {(result.similarity * 100).toFixed(1)}%
+                                    </Text>
+                                )}
+                            </View>
+                        )}
+                    </View>
+                )}
+
+                {/* Botón para nuevo reconocimiento */}
+                {result && !loading && (
+                    <TouchableOpacity
+                        style={styles.newRecognitionButton}
+                        onPress={handleStartRecognition}
+                    >
+                        <Text style={styles.newRecognitionText}>🔄 Nuevo Reconocimiento</Text>
+                    </TouchableOpacity>
+                )}
+
+                {/* Instrucciones */}
+                <View style={styles.instructionsSection}>
+                    <Text style={styles.instructionsTitle}>💡 Instrucciones:</Text>
+                    <Text style={styles.instructionsText}>
+                        • Asegúrate de tener buena conexión a internet{'\n'}
+                        • La imagen debe mostrar claramente el rostro{'\n'}
+                        • Evita imágenes borrosas o con poca luz{'\n'}
+                        • El procesamiento puede tomar hasta 2 minutos
+                    </Text>
+                </View>
+
             </ScrollView>
         </SafeAreaView>
     );
@@ -182,118 +301,221 @@ const styles = StyleSheet.create({
     },
     content: {
         flexGrow: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
         padding: 20,
     },
+    header: {
+        alignItems: 'center',
+        marginBottom: 20,
+    },
     title: {
-        fontSize: 28,
+        fontSize: 26,
         fontWeight: 'bold',
         color: '#2196F3',
-        marginBottom: 10,
         textAlign: 'center',
+        marginBottom: 8,
     },
     subtitle: {
-        fontSize: 18,
+        fontSize: 16,
         color: '#666',
-        marginBottom: 50,
         textAlign: 'center',
     },
-    button: {
+    statusContainer: {
+        backgroundColor: '#e8f5e8',
+        padding: 10,
+        borderRadius: 8,
+        marginBottom: 20,
+        alignItems: 'center',
+    },
+    statusText: {
+        fontSize: 14,
+        color: '#2e7d32',
+        fontWeight: '600',
+    },
+    mainButton: {
         backgroundColor: '#2196F3',
-        paddingVertical: 15,
-        paddingHorizontal: 30,
-        borderRadius: 10,
-        elevation: 3,
+        paddingVertical: 18,
+        paddingHorizontal: 40,
+        borderRadius: 12,
+        elevation: 4,
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.25,
         shadowRadius: 3.84,
-        minWidth: 200,
-        minHeight: 50,
-        justifyContent: 'center',
         alignItems: 'center',
+        marginBottom: 30,
+    },
+    disabledButton: {
+        backgroundColor: '#90CAF9',
     },
     buttonText: {
         color: '#fff',
+        fontSize: 20,
+        fontWeight: 'bold',
+    },
+    loadingContainer: {
+        alignItems: 'center',
+    },
+    loadingText: {
+        color: '#fff',
+        fontSize: 16,
+        marginTop: 10,
+        fontWeight: '600',
+    },
+    imageSection: {
+        marginBottom: 30,
+    },
+    sectionTitle: {
         fontSize: 18,
         fontWeight: 'bold',
+        color: '#333',
+        marginBottom: 15,
         textAlign: 'center',
     },
     imageContainer: {
-        marginTop: 30,
         alignItems: 'center',
     },
-    imageTitle: {
+    selectedImage: {
+        width: 250,
+        height: 250,
+        borderRadius: 15,
+        borderWidth: 3,
+        borderColor: '#2196F3',
+    },
+    resetButton: {
+        backgroundColor: '#FF9800',
+        paddingVertical: 8,
+        paddingHorizontal: 20,
+        borderRadius: 8,
+        marginTop: 15,
+    },
+    resetButtonText: {
+        color: '#fff',
+        fontSize: 14,
+        fontWeight: 'bold',
+    },
+    progressSection: {
+        backgroundColor: '#fff3cd',
+        padding: 20,
+        borderRadius: 12,
+        marginBottom: 20,
+        borderLeftWidth: 4,
+        borderLeftColor: '#ffc107',
+    },
+    progressTitle: {
         fontSize: 16,
         fontWeight: 'bold',
+        color: '#856404',
         marginBottom: 10,
-        color: '#333',
     },
-    image: {
-        width: 200,
-        height: 200,
-        borderRadius: 10,
-        borderWidth: 2,
-        borderColor: '#ddd',
+    progressSubtitle: {
+        fontSize: 14,
+        color: '#856404',
+        lineHeight: 20,
     },
-    resultContainer: {
+    resultSection: {
+        marginBottom: 30,
+    },
+    studentCard: {
         backgroundColor: '#fff',
+        borderRadius: 15,
         padding: 20,
-        borderRadius: 10,
-        marginTop: 20,
         elevation: 3,
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.1,
         shadowRadius: 4,
-        width: '100%',
+        borderLeftWidth: 5,
+        borderLeftColor: '#4CAF50',
     },
-    resultTitle: {
-        fontSize: 18,
+    alertCard: {
+        borderLeftColor: '#f44336',
+        backgroundColor: '#fff5f5',
+    },
+    alertBanner: {
+        backgroundColor: '#f44336',
+        padding: 8,
+        borderRadius: 8,
+        marginBottom: 15,
+        alignItems: 'center',
+    },
+    alertText: {
+        color: '#fff',
+        fontSize: 16,
         fontWeight: 'bold',
+    },
+    studentName: {
+        fontSize: 22,
+        fontWeight: 'bold',
+        color: '#2196F3',
         textAlign: 'center',
         marginBottom: 15,
     },
-    studentInfo: {
-        alignItems: 'center',
-    },
-    studentName: {
-        fontSize: 20,
-        fontWeight: 'bold',
-        color: '#2196F3',
-        marginBottom: 8,
+    studentDetails: {
+        gap: 8,
     },
     studentDetail: {
         fontSize: 16,
-        color: '#666',
-        marginBottom: 8,
+        color: '#555',
+        paddingVertical: 2,
     },
-    confidence: {
-        fontSize: 14,
-        color: '#4CAF50',
+    noResultCard: {
+        backgroundColor: '#fff',
+        borderRadius: 15,
+        padding: 20,
+        elevation: 3,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        borderLeftWidth: 5,
+        borderLeftColor: '#f44336',
+        alignItems: 'center',
+    },
+    noResultTitle: {
+        fontSize: 20,
         fontWeight: 'bold',
-        marginBottom: 4,
-    },
-    noResult: {
-        fontSize: 16,
         color: '#f44336',
+        marginBottom: 10,
+    },
+    noResultText: {
+        fontSize: 16,
+        color: '#666',
         textAlign: 'center',
+        lineHeight: 22,
+    },
+    similarityText: {
+        fontSize: 14,
+        color: '#999',
+        marginTop: 10,
         fontStyle: 'italic',
     },
-    debugContainer: {
-        marginTop: 20,
-        padding: 10,
-        backgroundColor: '#f0f0f0',
-        borderRadius: 5,
+    newRecognitionButton: {
+        backgroundColor: '#4CAF50',
+        paddingVertical: 12,
+        paddingHorizontal: 30,
+        borderRadius: 10,
+        alignItems: 'center',
+        marginBottom: 30,
     },
-    debugTitle: {
-        fontSize: 14,
+    newRecognitionText: {
+        color: '#fff',
+        fontSize: 16,
         fontWeight: 'bold',
-        marginBottom: 5,
     },
-    debugText: {
-        fontSize: 10,
-        fontFamily: 'monospace',
-        color: '#666',
+    instructionsSection: {
+        backgroundColor: '#f8f9fa',
+        padding: 15,
+        borderRadius: 10,
+        borderWidth: 1,
+        borderColor: '#e9ecef',
+    },
+    instructionsTitle: {
+        fontSize: 16,
+        fontWeight: 'bold',
+        color: '#495057',
+        marginBottom: 8,
+    },
+    instructionsText: {
+        fontSize: 14,
+        color: '#6c757d',
+        lineHeight: 20,
     },
 });
 

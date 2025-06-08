@@ -1,4 +1,46 @@
 {
   "name": "StudentFaceRecognitionNew",
-  "displayName": "StudentFaceRecognitionNew"
+  "displayName": "UPAO - Reconocimiento Facial",
+  "version": "1.0.0",
+  "main": "index.js",
+  "dependencies": {
+    "react": "19.0.0",
+    "react-native": "0.79.3"
+  },
+  "android": {
+    "package": "com.studentfacerecognitionnew",
+    "versionCode": 1,
+    "compileSdkVersion": 34,
+    "targetSdkVersion": 34,
+    "minSdkVersion": 21,
+    "buildToolsVersion": "34.0.0",
+    "permissions": [
+      "android.permission.CAMERA",
+      "android.permission.WRITE_EXTERNAL_STORAGE",
+      "android.permission.READ_EXTERNAL_STORAGE",
+      "android.permission.INTERNET",
+      "android.permission.ACCESS_NETWORK_STATE",
+      "android.permission.READ_MEDIA_IMAGES"
+    ],
+    "usesCleartextTraffic": true,
+    "networkSecurityConfig": "network_security_config"
+  },
+  "ios": {
+    "bundleIdentifier": "com.studentfacerecognitionnew",
+    "version": "1.0.0",
+    "buildNumber": "1",
+    "deploymentTarget": "12.0",
+    "infoPlist": {
+      "NSCameraUsageDescription": "Esta app necesita acceso a la cámara para tomar fotos de estudiantes y realizar reconocimiento facial.",
+      "NSPhotoLibraryUsageDescription": "Esta app necesita acceso a la galería para seleccionar fotos de estudiantes.",
+      "NSAppTransportSecurity": {
+        "NSAllowsArbitraryLoads": true
+      }
+    }
+  },
+  "metro": {
+    "transformer": {
+      "assetPlugins": ["expo-asset/tools/hashAssetFiles"]
+    }
+  }
 }
