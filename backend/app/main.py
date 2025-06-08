@@ -395,29 +395,27 @@ async def health_check():
 
 @app.get("/info")
 async def system_info():
-    """Información del sistema optimizada para servidor"""
+    """Información del sistema optimizada para Railway + D1"""
     try:
-        from .models.database import get_database_stats
-        from .services.database_service import ConfigService
-        from .models.database import SessionLocal
+        from .models.database import get_database_stats, is_d1_enabled, get_database_type
 
-        # Obtener estadísticas
+        # Obtener estadísticas de base de datos
         db_stats = get_database_stats()
 
-        # Obtener configuración
-        db = SessionLocal()
-        config_service = ConfigService()
+        # Configuración por defecto (sin depender de system_config)
+        default_config = {
+            "recognition_threshold": float(os.getenv("RECOGNITION_THRESHOLD", "0.8")),
+            "max_image_size_mb": round(int(os.getenv("MAX_IMAGE_SIZE", "10485760")) / (1024 * 1024), 2),
+            "allowed_formats": os.getenv("ALLOWED_IMAGE_FORMATS", "jpg,jpeg,png,bmp").split(",")
+        }
 
-        recognition_threshold = config_service.get_recognition_threshold(db)
-        max_image_size = config_service.get_max_image_size(db)
-        allowed_formats = config_service.get_allowed_formats(db)
-
-        db.close()
-
-        # Estadísticas de almacenamiento (solo si es local)
+        # Estadísticas de almacenamiento
         storage_stats = {}
         if os.getenv("USE_CLOUDFLARE_R2", "false").lower() != "true" and image_processor:
-            storage_stats = image_processor.get_directory_stats()
+            try:
+                storage_stats = image_processor.get_directory_stats()
+            except:
+                storage_stats = {"error": "No disponible"}
 
         return {
             "system": {
@@ -425,14 +423,13 @@ async def system_info():
                 "status": "active",
                 "server": "Railway",
                 "environment": "production" if os.getenv("DEBUG", "False") != "True" else "development",
-                "recognition_threshold": recognition_threshold,
-                "max_image_size_mb": round(max_image_size / (1024 * 1024), 2),
-                "allowed_formats": allowed_formats
+                **default_config
             },
             "database": {
                 **db_stats,
-                "type": "SQLite",
-                "cloudflare_d1_ready": True
+                "type": get_database_type(),
+                "cloudflare_d1_ready": is_d1_enabled(),
+                "d1_enabled": is_d1_enabled()
             },
             "storage": {
                 "type": "Cloudflare R2" if os.getenv("USE_CLOUDFLARE_R2", "false").lower() == "true" else "Local",
@@ -449,7 +446,32 @@ async def system_info():
 
     except Exception as e:
         logger.error(f"❌ Error al obtener info del sistema: {e}")
-        raise HTTPException(status_code=500, detail=f"Error del sistema: {str(e)}")
+
+        # Fallback con información básica
+        return {
+            "system": {
+                "version": "1.0.0",
+                "status": "active",
+                "server": "Railway",
+                "environment": "production",
+                "recognition_threshold": 0.8,
+                "max_image_size_mb": 10.0,
+                "allowed_formats": ["jpg", "jpeg", "png", "bmp"]
+            },
+            "database": {
+                "type": "Cloudflare D1" if os.getenv("USE_CLOUDFLARE_D1", "false").lower() == "true" else "SQLite",
+                "status": "unknown",
+                "error": str(e)
+            },
+            "storage": {
+                "type": "Cloudflare R2" if os.getenv("USE_CLOUDFLARE_R2", "false").lower() == "true" else "Local"
+            },
+            "configuration": {
+                "debug": os.getenv("DEBUG", "False") == "True",
+                "use_cloudflare_r2": os.getenv("USE_CLOUDFLARE_R2", "false").lower() == "true",
+                "use_cloudflare_d1": os.getenv("USE_CLOUDFLARE_D1", "false").lower() == "true"
+            }
+        }
 
 
 @app.get("/server-status")
