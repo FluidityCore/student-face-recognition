@@ -57,11 +57,10 @@ class CloudflareAdapter:
     # MÉTODOS PARA ESTUDIANTES
     # ==========================================
 
-    def create_student(self, db: Session, student_data: Dict[str, Any], image_file: UploadFile = None) -> Dict[
-        str, Any]:
+    def create_student(self, db: Session, student_data: Dict[str, Any], image_file: UploadFile = None) -> Dict[str, Any]:
         """Crear estudiante usando D1 + R2 o SQLite + Local"""
         try:
-            # 1. Subir imagen si se proporciona
+            # Subir imagen si se proporciona
             image_url = None
             if image_file:
                 if self.r2_available:
@@ -75,13 +74,13 @@ class CloudflareAdapter:
 
                 student_data["imagen_path"] = image_url
 
-            # 2. Crear estudiante en base de datos
+            # Crear estudiante en base de datos
             if self.d1_available:
                 # Usar D1
                 student_id = self.d1_service.create_student(student_data)
                 student = self.d1_service.get_student_by_id(student_id)
 
-                # ✅ FIX: Verificar que student no sea None
+                # Verificar que student no sea None
                 if student is None:
                     raise Exception(f"No se pudo recuperar el estudiante creado con ID {student_id}")
 
@@ -114,7 +113,7 @@ class CloudflareAdapter:
                 students_raw = self.d1_service.get_all_students()
                 logger.info(f"📊 D1 raw response: {len(students_raw)} estudiantes")
 
-                # ✅ FIX: Verificar que tenemos datos
+                # Verificar que tenemos datos
                 if not students_raw:
                     logger.warning("⚠️ D1 devolvió array vacío, verificando consulta directa...")
 
@@ -132,7 +131,7 @@ class CloudflareAdapter:
                 for student_data in students_raw:
                     try:
                         formatted = self._format_student_response(student_data)
-                        if formatted:  # Solo agregar si el formateo fue exitoso
+                        if formatted:
                             students.append(formatted)
                     except Exception as e:
                         logger.error(f"❌ Error formateando estudiante {student_data}: {e}")
@@ -154,7 +153,7 @@ class CloudflareAdapter:
             if self.d1_available:
                 student = self.d1_service.get_student_by_id(student_id)
 
-                # ✅ FIX: Verificar None antes de formatear
+                # Verificar None antes de formatear
                 if student is None:
                     logger.warning(f"⚠️ Estudiante {student_id} no encontrado en D1")
                     return None
@@ -176,7 +175,7 @@ class CloudflareAdapter:
             if self.d1_available:
                 student = self.d1_service.get_student_by_codigo(codigo)
 
-                # ✅ FIX: Verificar None antes de formatear
+                # Verificar None antes de formatear
                 if student is None:
                     logger.warning(f"⚠️ Estudiante con código {codigo} no encontrado en D1")
                     return None
@@ -230,7 +229,7 @@ class CloudflareAdapter:
                 if success:
                     student = self.d1_service.get_student_by_id(student_id)
 
-                    # ✅ FIX: Verificar None antes de formatear
+                    # Verificar None antes de formatear
                     if student is None:
                         logger.error(f"❌ No se pudo recuperar estudiante actualizado {student_id}")
                         return None
@@ -314,136 +313,17 @@ class CloudflareAdapter:
             }
 
     # ==========================================
-    # MÉTODOS PARA ALMACENAMIENTO DE IMÁGENES
-    # ==========================================
-
-    async def save_recognition_image(self, file: UploadFile) -> str:
-        """Guardar imagen de reconocimiento temporal"""
-        try:
-            if self.r2_available:
-                return await self.r2_service.upload_image(file, "recognition")
-            else:
-                from ..utils.image_processing import ImageProcessor
-                image_processor = ImageProcessor()
-                return await image_processor.save_image(file, "recognition")
-        except Exception as e:
-            logger.error(f"❌ Error guardando imagen de reconocimiento: {e}")
-            raise
-
-    def delete_temp_image(self, image_path: str) -> bool:
-        """Eliminar imagen temporal"""
-        try:
-            if self.r2_available and image_path.startswith("http"):
-                return self.r2_service.delete_file(image_path)
-            else:
-                try:
-                    os.remove(image_path)
-                    return True
-                except:
-                    return False
-        except Exception as e:
-            logger.error(f"❌ Error eliminando imagen temporal: {e}")
-            return False
-
-    def get_storage_stats(self) -> Dict[str, Any]:
-        """Obtener estadísticas de almacenamiento"""
-        try:
-            if self.r2_available:
-                return self.r2_service.get_bucket_stats()
-            else:
-                from ..utils.image_processing import ImageProcessor
-                image_processor = ImageProcessor()
-                return image_processor.get_directory_stats()
-        except Exception as e:
-            logger.error(f"❌ Error obteniendo stats de almacenamiento: {e}")
-            return {}
-
-    # ==========================================
-    # MÉTODOS DE MIGRACIÓN
-    # ==========================================
-
-    def migrate_to_cloudflare(self, db: Session) -> Dict[str, Any]:
-        """Migrar datos desde SQLite local a Cloudflare D1"""
-        if not self.d1_available:
-            raise Exception("Cloudflare D1 no está disponible")
-
-        try:
-            # Obtener datos de SQLite
-            students = self.student_service.get_all_students(db)
-            logs = self.log_service.get_recognition_logs(db, skip=0, limit=10000)
-
-            # Convertir a diccionarios
-            students_data = [self._student_to_dict(s) for s in students]
-            logs_data = [self._log_to_dict(l) for l in logs]
-
-            # Migrar a D1
-            result = self.d1_service.migrate_from_sqlite(students_data, logs_data)
-
-            logger.info(f"✅ Migración completada: {result}")
-            return result
-
-        except Exception as e:
-            logger.error(f"❌ Error en migración: {e}")
-            raise
-
-    def migrate_images_to_r2(self) -> Dict[str, Any]:
-        """Migrar imágenes locales a Cloudflare R2"""
-        if not self.r2_available:
-            raise Exception("Cloudflare R2 no está disponible")
-
-        try:
-            migrated_count = 0
-            error_count = 0
-
-            # Obtener todas las imágenes locales
-            from ..utils.image_processing import ImageProcessor
-            image_processor = ImageProcessor()
-
-            upload_dir = os.getenv("UPLOAD_DIR", "uploads")
-
-            for category in ["reference", "recognition"]:
-                category_dir = os.path.join(upload_dir, category)
-                if os.path.exists(category_dir):
-                    for filename in os.listdir(category_dir):
-                        file_path = os.path.join(category_dir, filename)
-                        if os.path.isfile(file_path):
-                            try:
-                                # Leer archivo
-                                with open(file_path, 'rb') as f:
-                                    content = f.read()
-
-                                # Subir a R2
-                                r2_url = self.r2_service.upload_file(content, filename, category)
-                                migrated_count += 1
-
-                                logger.info(f"✅ Migrado: {file_path} → {r2_url}")
-
-                            except Exception as e:
-                                logger.error(f"❌ Error migrando {file_path}: {e}")
-                                error_count += 1
-
-            return {
-                "migrated": migrated_count,
-                "errors": error_count,
-                "success": error_count == 0
-            }
-
-        except Exception as e:
-            logger.error(f"❌ Error en migración de imágenes: {e}")
-            raise
-
-    # ==========================================
     # MÉTODOS AUXILIARES
     # ==========================================
 
     def _format_student_response(self, student_data: Union[Dict, Any]) -> Optional[Dict[str, Any]]:
         """Formatear respuesta de estudiante"""
-        # ✅ FIX: Manejar None correctamente
+        # Manejar None correctamente
         if student_data is None:
             logger.warning("⚠️ _format_student_response recibió None")
             return None
 
-        # ✅ FIX: Verificar que tenemos datos válidos
+        # Verificar que tenemos datos válidos
         if isinstance(student_data, dict):
             data = student_data.copy()
         elif hasattr(student_data, '__dict__'):
@@ -452,7 +332,7 @@ class CloudflareAdapter:
             logger.error(f"❌ Tipo de datos no válido para estudiante: {type(student_data)}")
             return None
 
-        # ✅ FIX: Verificar campos obligatorios
+        # Verificar campos obligatorios
         required_fields = ['id', 'nombre', 'apellidos', 'codigo']
         missing_fields = [field for field in required_fields if field not in data or data[field] is None]
 
@@ -469,7 +349,7 @@ class CloudflareAdapter:
                 logger.warning(f"⚠️ Error parseando face_encoding: {e}")
                 data["face_encoding"] = None
 
-        # ✅ FIX: Asegurar tipos correctos
+        # Asegurar tipos correctos
         try:
             # Convertir fechas si son strings
             for date_field in ['created_at', 'updated_at']:
@@ -493,48 +373,6 @@ class CloudflareAdapter:
         except Exception as e:
             logger.error(f"❌ Error formateando datos de estudiante: {e}")
             return None
-
-    def _student_to_dict(self, student: Student) -> Dict[str, Any]:
-        """Convertir modelo Student a diccionario"""
-        return {
-            "nombre": student.nombre,
-            "apellidos": student.apellidos,
-            "codigo": student.codigo,
-            "correo": student.correo,
-            "requisitoriado": student.requisitoriado,
-            "imagen_path": student.imagen_path,
-            "face_encoding": student.face_encoding,
-            "created_at": student.created_at.isoformat() if student.created_at else None,
-            "updated_at": student.updated_at.isoformat() if student.updated_at else None,
-            "active": student.active
-        }
-
-    def _log_to_dict(self, log: RecognitionLogModel) -> Dict[str, Any]:
-        """Convertir modelo RecognitionLog a diccionario"""
-        return {
-            "found": log.found,
-            "student_id": log.student_id,
-            "similarity": log.similarity,
-            "confidence": log.confidence,
-            "processing_time": log.processing_time,
-            "image_path": log.image_path,
-            "ip_address": log.ip_address,
-            "user_agent": log.user_agent,
-            "timestamp": log.timestamp.isoformat() if log.timestamp else None
-        }
-
-    def cleanup_temp_files(self, max_age_hours: int = 24) -> int:
-        """Limpiar archivos temporales"""
-        try:
-            if self.r2_available:
-                return self.r2_service.cleanup_old_files("temp", max_age_hours // 24)
-            else:
-                from ..utils.image_processing import ImageProcessor
-                image_processor = ImageProcessor()
-                return image_processor.cleanup_temp_files(max_age_hours)
-        except Exception as e:
-            logger.error(f"❌ Error limpiando archivos: {e}")
-            return 0
 
     def get_system_status(self) -> Dict[str, Any]:
         """Obtener estado del sistema Cloudflare"""

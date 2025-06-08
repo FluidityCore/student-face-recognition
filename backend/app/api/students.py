@@ -9,13 +9,12 @@ import logging
 
 from ..models.database import get_db
 from ..models.schemas import StudentCreate, StudentResponse, StudentUpdate
-from ..services.cloudflare_adapter import CloudflareAdapter  # ✅ CAMBIO PRINCIPAL
+from ..services.cloudflare_adapter import CloudflareAdapter
 from ..services.face_recognition import FaceRecognitionService
 from ..utils.image_processing import ImageProcessor
 
 router = APIRouter(prefix="/api/students", tags=["students"])
 
-# ✅ USAR CLOUDFLARE ADAPTER EN LUGAR DE SERVICIOS DIRECTOS
 adapter = CloudflareAdapter()
 face_service = FaceRecognitionService()
 image_processor = ImageProcessor()
@@ -41,59 +40,59 @@ async def create_student(
     temp_file_path = None
 
     try:
-        logger.info(f"📝 Creando estudiante: {nombre} {apellidos} ({codigo})")
+        logger.info(f"Creando estudiante: {nombre} {apellidos} ({codigo})")
 
-        # 1. VALIDAR FORMATO DE IMAGEN
+        # Validar formato de imagen
         if not image_processor.is_valid_image(image):
             raise HTTPException(status_code=400, detail="Formato de imagen no válido")
 
-        # 2. ✅ VERIFICAR QUE EL CÓDIGO NO EXISTA USANDO ADAPTER
+        # Verificar que el código no exista usando adapter
         existing_student = adapter.get_student_by_codigo(db, codigo)
         if existing_student:
             raise HTTPException(status_code=400, detail="El código de estudiante ya existe")
 
-        # 3. LEER IMAGEN EN MEMORIA
-        logger.info("📂 Leyendo imagen en memoria...")
+        # Leer imagen en memoria
+        logger.info("Leyendo imagen en memoria...")
         image_content = await image.read()
 
         if len(image_content) == 0:
             raise HTTPException(status_code=400, detail="Imagen vacía")
 
         file_size_mb = len(image_content) / (1024 * 1024)
-        logger.info(f"📊 Tamaño de imagen: {file_size_mb:.2f}MB")
+        logger.info(f"Tamaño de imagen: {file_size_mb:.2f}MB")
 
         if file_size_mb > 10:  # Límite de 10MB
             raise HTTPException(status_code=400, detail="Imagen demasiado grande (máximo 10MB)")
 
-        # 4. CREAR ARCHIVO TEMPORAL PARA FACE RECOGNITION
-        logger.info("📁 Creando archivo temporal...")
+        # Crear archivo temporal para face recognition
+        logger.info("Creando archivo temporal...")
         with tempfile.NamedTemporaryFile(delete=False, suffix=f"_{int(time.time())}.jpg") as temp_file:
             temp_file.write(image_content)
             temp_file_path = temp_file.name
 
-        logger.info(f"📁 Archivo temporal creado: {temp_file_path}")
+        logger.info(f"Archivo temporal creado: {temp_file_path}")
 
-        # 5. EXTRAER ENCODING FACIAL DEL ARCHIVO TEMPORAL
-        logger.info("🤖 Extrayendo encoding facial...")
+        # Extraer encoding facial del archivo temporal
+        logger.info("Extrayendo encoding facial...")
         face_encoding = await face_service.extract_face_encoding(temp_file_path)
 
         if face_encoding is None:
             raise HTTPException(status_code=400, detail="No se detectó un rostro en la imagen")
 
-        logger.info(f"✅ Encoding facial extraído: {len(face_encoding)} características")
+        logger.info(f"Encoding facial extraído: {len(face_encoding)} características")
 
-        # 6. SUBIR IMAGEN A CLOUDFLARE R2
-        logger.info("☁️ Subiendo imagen a Cloudflare R2...")
+        # Subir imagen a Cloudflare R2
+        logger.info("Subiendo imagen a Cloudflare R2...")
         try:
             # Usar el image_processor para subir desde el archivo temporal
             image_url = await image_processor.save_image_from_path(temp_file_path, "reference")
-            logger.info(f"✅ Imagen subida a R2: {image_url}")
+            logger.info(f"Imagen subida a R2: {image_url}")
         except Exception as e:
-            logger.error(f"❌ Error al subir a R2: {e}")
+            logger.error(f"Error al subir a R2: {e}")
             raise HTTPException(status_code=500, detail=f"Error al subir imagen: {str(e)}")
 
-        # 7. ✅ CREAR ESTUDIANTE USANDO ADAPTER
-        logger.info("💾 Guardando estudiante usando CloudflareAdapter...")
+        # Crear estudiante usando adapter
+        logger.info("Guardando estudiante usando CloudflareAdapter...")
         student_data = {
             "nombre": nombre,
             "apellidos": apellidos,
@@ -106,7 +105,7 @@ async def create_student(
 
         student = adapter.create_student(db, student_data, None)  # None porque ya procesamos la imagen
 
-        logger.info(f"✅ Estudiante creado exitosamente: ID {student.get('id', 'unknown')}")
+        logger.info(f"Estudiante creado exitosamente: ID {student.get('id', 'unknown')}")
 
         # Convertir a formato de respuesta
         return StudentResponse(**student)
@@ -115,19 +114,19 @@ async def create_student(
         # Re-lanzar HTTPExceptions sin modificar
         raise
     except Exception as e:
-        logger.error(f"❌ Error inesperado al crear estudiante: {e}")
+        logger.error(f"Error inesperado al crear estudiante: {e}")
         import traceback
-        logger.error(f"📍 Traceback: {traceback.format_exc()}")
+        logger.error(f"Traceback: {traceback.format_exc()}")
         raise HTTPException(status_code=500, detail=f"Error al crear estudiante: {str(e)}")
 
     finally:
-        # 8. LIMPIAR ARCHIVO TEMPORAL
+        # Limpiar archivo temporal
         if temp_file_path and os.path.exists(temp_file_path):
             try:
                 os.remove(temp_file_path)
-                logger.info(f"🧹 Archivo temporal eliminado: {temp_file_path}")
+                logger.info(f"Archivo temporal eliminado: {temp_file_path}")
             except Exception as e:
-                logger.warning(f"⚠️ No se pudo eliminar archivo temporal {temp_file_path}: {e}")
+                logger.warning(f"No se pudo eliminar archivo temporal {temp_file_path}: {e}")
 
 
 @router.get("/", response_model=List[StudentResponse])
@@ -139,7 +138,7 @@ def get_all_students(
     """
     Obtener lista de todos los estudiantes
     """
-    # ✅ USAR ADAPTER EN LUGAR DE SERVICIO DIRECTO
+    # Usar adapter en lugar de servicio directo
     students_data = adapter.get_all_students(db)
 
     # Aplicar paginación manual (ya que get_all_students no tiene skip/limit)
@@ -155,7 +154,6 @@ def get_student(student_id: int, db: Session = Depends(get_db)):
     """
     Obtener un estudiante por ID
     """
-    # ✅ USAR ADAPTER
     student_data = adapter.get_student_by_id(db, student_id)
     if not student_data:
         raise HTTPException(status_code=404, detail="Estudiante no encontrado")
@@ -168,7 +166,6 @@ def get_student_by_codigo(codigo: str, db: Session = Depends(get_db)):
     """
     Obtener un estudiante por código
     """
-    # ✅ USAR ADAPTER
     student_data = adapter.get_student_by_codigo(db, codigo)
     if not student_data:
         raise HTTPException(status_code=404, detail="Estudiante no encontrado")
@@ -193,7 +190,7 @@ async def update_student(
     temp_file_path = None
 
     try:
-        # ✅ VERIFICAR QUE EL ESTUDIANTE EXISTE USANDO ADAPTER
+        # Verificar que el estudiante existe usando adapter
         student = adapter.get_student_by_id(db, student_id)
         if not student:
             raise HTTPException(status_code=404, detail="Estudiante no encontrado")
@@ -205,7 +202,7 @@ async def update_student(
         if apellidos is not None:
             update_data["apellidos"] = apellidos
         if codigo is not None:
-            # ✅ VERIFICAR QUE EL NUEVO CÓDIGO NO EXISTA USANDO ADAPTER
+            # Verificar que el nuevo código no exista usando adapter
             existing = adapter.get_student_by_codigo(db, codigo)
             if existing and existing.get('id') != student_id:
                 raise HTTPException(status_code=400, detail="El código ya existe")
@@ -217,7 +214,7 @@ async def update_student(
 
         # Si hay nueva imagen, procesarla
         if image:
-            logger.info(f"🔄 Actualizando imagen para estudiante {student_id}")
+            logger.info(f"Actualizando imagen para estudiante {student_id}")
 
             if not image_processor.is_valid_image(image):
                 raise HTTPException(status_code=400, detail="Formato de imagen no válido")
@@ -242,9 +239,9 @@ async def update_student(
             update_data["imagen_path"] = new_image_url
             update_data["face_encoding"] = face_encoding.tolist()
 
-            logger.info(f"✅ Nueva imagen procesada y subida: {new_image_url}")
+            logger.info(f"Nueva imagen procesada y subida: {new_image_url}")
 
-        # ✅ ACTUALIZAR USANDO ADAPTER
+        # Actualizar usando adapter
         updated_student = adapter.update_student(db, student_id, update_data, image)
 
         if not updated_student:
@@ -255,7 +252,7 @@ async def update_student(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"❌ Error al actualizar estudiante: {e}")
+        logger.error(f"Error al actualizar estudiante: {e}")
         raise HTTPException(status_code=500, detail=f"Error al actualizar estudiante: {str(e)}")
 
     finally:
@@ -263,7 +260,7 @@ async def update_student(
         if temp_file_path and os.path.exists(temp_file_path):
             try:
                 os.remove(temp_file_path)
-                logger.info(f"🧹 Archivo temporal eliminado: {temp_file_path}")
+                logger.info(f"Archivo temporal eliminado: {temp_file_path}")
             except:
                 pass
 
@@ -274,12 +271,12 @@ def delete_student(student_id: int, db: Session = Depends(get_db)):
     Eliminar un estudiante
     """
     try:
-        # ✅ VERIFICAR EXISTENCIA Y ELIMINAR USANDO ADAPTER
+        # Verificar existencia y eliminar usando adapter
         student = adapter.get_student_by_id(db, student_id)
         if not student:
             raise HTTPException(status_code=404, detail="Estudiante no encontrado")
 
-        logger.info(f"🗑️ Eliminando estudiante {student_id} usando CloudflareAdapter")
+        logger.info(f"Eliminando estudiante {student_id} usando CloudflareAdapter")
 
         # Eliminar usando adapter (maneja tanto D1 como SQLite)
         success = adapter.delete_student(db, student_id)
@@ -292,7 +289,7 @@ def delete_student(student_id: int, db: Session = Depends(get_db)):
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"❌ Error al eliminar estudiante: {e}")
+        logger.error(f"Error al eliminar estudiante: {e}")
         raise HTTPException(status_code=500, detail=f"Error al eliminar estudiante: {str(e)}")
 
 
@@ -303,7 +300,6 @@ def get_student_image(student_id: int, db: Session = Depends(get_db)):
     """
     from fastapi.responses import RedirectResponse
 
-    # ✅ USAR ADAPTER
     student = adapter.get_student_by_id(db, student_id)
     if not student:
         raise HTTPException(status_code=404, detail="Estudiante no encontrado")
@@ -347,7 +343,7 @@ async def create_students_batch(
                     })
                     continue
 
-                # ✅ VERIFICAR CÓDIGO ÚNICO USANDO ADAPTER
+                # Verificar código único usando adapter
                 existing = adapter.get_student_by_codigo(db, student_data['codigo'])
                 if existing:
                     errors.append({
@@ -357,7 +353,7 @@ async def create_students_batch(
                     })
                     continue
 
-                # ✅ CREAR ESTUDIANTE USANDO ADAPTER
+                # Crear estudiante usando adapter
                 student_create_data = {
                     "nombre": student_data['nombre'],
                     "apellidos": student_data['apellidos'],
@@ -394,7 +390,6 @@ def get_student_face_encoding(student_id: int, db: Session = Depends(get_db)):
     """
     Obtener el encoding facial de un estudiante (para debugging)
     """
-    # ✅ USAR ADAPTER
     student = adapter.get_student_by_id(db, student_id)
     if not student:
         raise HTTPException(status_code=404, detail="Estudiante no encontrado")
