@@ -1,5 +1,5 @@
 # ==========================================
-# REQUIREMENTS PARA SERVIDOR - RENDER
+# REQUIREMENTS PARA RAILWAY - OPTIMIZADO ML
 # ==========================================
 
 # FastAPI y servidor web
@@ -12,29 +12,26 @@ python-multipart>=0.0.6
 sqlalchemy>=2.0.20
 alembic>=1.12.0
 
-# Cloud Storage - Cloudflare R2 (compatible con S3)
+# Cloud Storage - Cloudflare R2
 boto3>=1.34.0
 botocore>=1.34.0
 
-# Procesamiento de imágenes y ML
+# Procesamiento de imágenes y ML (Railway optimizado)
 pillow>=10.0.0
-opencv-python-headless>=4.8.0  # Versión headless para servidor
+opencv-python-headless>=4.8.0
 numpy>=1.24.0
 scikit-learn>=1.3.0
 
-# Reconocimiento facial con face_recognition
-cmake
-dlib-binary==19.22.0
-face_recognition==1.3.0
+# Reconocimiento facial (Railway maneja mejor la compilación)
+face_recognition>=1.3.0
+dlib>=19.22.0
 
-# Utilidades y configuración
+# Utilidades
 python-dotenv>=1.0.0
 python-jose[cryptography]>=3.3.0
 passlib[bcrypt]>=1.7.4
 pydantic>=2.5.0
 pydantic-settings>=2.0.0
-
-# HTTP y requests
 httpx>=0.25.0
 requests>=2.31.0
 
