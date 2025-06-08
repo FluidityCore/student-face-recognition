@@ -14,6 +14,10 @@
       <change afterPath="$PROJECT_DIR$/mobile/src/screens/StudentsListScreen.js" afterDir="false" />
       <change afterPath="$PROJECT_DIR$/mobile/src/services/ApiService.js" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/Procfile" beforeDir="false" afterPath="$PROJECT_DIR$/backend/Procfile" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/app.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend/app.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/app/api/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend/app/api/__init__.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/railway.json" beforeDir="false" afterPath="$PROJECT_DIR$/backend/railway.json" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/mobile/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/mobile/.gitignore" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/mobile/App.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/mobile/App.js" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/mobile/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/mobile/README.md" afterDir="false" />
