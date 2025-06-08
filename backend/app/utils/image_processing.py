@@ -83,9 +83,36 @@ class ImageProcessor:
 
     async def save_image(self, file: UploadFile, category: str = "temp") -> str:
         """
-        Guardar imagen en el directorio correspondiente
+        Guardar imagen usando Cloudflare R2 o almacenamiento local
         category: 'reference', 'recognition', 'test', 'temp'
         """
+        try:
+            # Verificar si usar Cloudflare R2
+            use_r2 = os.getenv("USE_CLOUDFLARE_R2", "false").lower() == "true"
+
+            if use_r2:
+                # Usar Cloudflare R2
+                try:
+                    from ..services.cloudflare_r2 import CloudflareR2Service
+                    r2_service = CloudflareR2Service()
+
+                    if r2_service.is_available():
+                        logger.info(f"📤 Subiendo imagen a Cloudflare R2: {category}")
+                        return await r2_service.upload_image(file, category)
+                    else:
+                        logger.warning("⚠️ R2 no disponible, usando almacenamiento local")
+                except ImportError:
+                    logger.warning("⚠️ Servicio R2 no disponible, usando almacenamiento local")
+
+            # Fallback: almacenamiento local
+            return await self._save_image_local(file, category)
+
+        except Exception as e:
+            logger.error(f"❌ Error al guardar imagen: {e}")
+            raise
+
+    async def _save_image_local(self, file: UploadFile, category: str = "temp") -> str:
+        """Guardar imagen en almacenamiento local (método original)"""
         try:
             # Generar nombre único
             file_extension = file.filename.lower().split('.')[-1]
@@ -109,11 +136,11 @@ class ImageProcessor:
             if processed_path != file_path and os.path.exists(file_path):
                 os.remove(file_path)
 
-            logger.info(f"✅ Imagen guardada: {processed_path}")
+            logger.info(f"✅ Imagen guardada localmente: {processed_path}")
             return processed_path
 
         except Exception as e:
-            logger.error(f"❌ Error al guardar imagen: {e}")
+            logger.error(f"❌ Error al guardar imagen local: {e}")
             # Limpiar archivo si existe
             if 'file_path' in locals() and os.path.exists(file_path):
                 os.remove(file_path)
@@ -239,6 +266,25 @@ class ImageProcessor:
     def get_image_info(self, image_path: str) -> dict:
         """Obtener información de la imagen"""
         try:
+            # Verificar si es URL de R2 o archivo local
+            if image_path.startswith("http"):
+                # Es una URL de R2, usar servicio R2 para obtener info
+                try:
+                    from ..services.cloudflare_r2 import CloudflareR2Service
+                    r2_service = CloudflareR2Service()
+                    if r2_service.is_available():
+                        return r2_service.get_file_info(image_path) or {}
+                except ImportError:
+                    pass
+
+                # Si no se puede obtener info de R2, retornar info básica
+                return {
+                    "filename": os.path.basename(image_path),
+                    "url": image_path,
+                    "type": "remote"
+                }
+
+            # Es un archivo local
             image = Image.open(image_path)
 
             # Información básica
@@ -249,7 +295,8 @@ class ImageProcessor:
                 "size": image.size,
                 "width": image.width,
                 "height": image.height,
-                "file_size": os.path.getsize(image_path)
+                "file_size": os.path.getsize(image_path),
+                "type": "local"
             }
 
             # Calcular hash para verificar duplicados
@@ -287,7 +334,22 @@ class ImageProcessor:
     def convert_to_opencv(self, image_path: str) -> Optional[np.ndarray]:
         """Convertir imagen a formato OpenCV"""
         try:
-            image = cv2.imread(image_path)
+            # Verificar si es URL o archivo local
+            if image_path.startswith("http"):
+                # Para URLs, necesitamos descargar la imagen primero
+                import requests
+                response = requests.get(image_path)
+                if response.status_code == 200:
+                    # Convertir bytes a numpy array
+                    image_array = np.frombuffer(response.content, np.uint8)
+                    image = cv2.imdecode(image_array, cv2.IMREAD_COLOR)
+                else:
+                    logger.error(f"Error descargando imagen: {response.status_code}")
+                    return None
+            else:
+                # Archivo local
+                image = cv2.imread(image_path)
+
             if image is None:
                 return None
 
@@ -302,6 +364,21 @@ class ImageProcessor:
     def cleanup_temp_files(self, max_age_hours: int = 24):
         """Limpiar archivos temporales antiguos"""
         try:
+            # Si estamos usando R2, limpiar archivos temporales en R2
+            use_r2 = os.getenv("USE_CLOUDFLARE_R2", "false").lower() == "true"
+
+            if use_r2:
+                try:
+                    from ..services.cloudflare_r2 import CloudflareR2Service
+                    r2_service = CloudflareR2Service()
+                    if r2_service.is_available():
+                        deleted_count = r2_service.cleanup_old_files("temp", max_age_hours // 24)
+                        logger.info(f"✅ Limpieza R2 completada: {deleted_count} archivos eliminados")
+                        return deleted_count
+                except ImportError:
+                    pass
+
+            # Limpiar archivos locales
             temp_dir = os.path.join(self.upload_dir, "temp")
             current_time = datetime.now().timestamp()
             max_age_seconds = max_age_hours * 3600
@@ -316,7 +393,7 @@ class ImageProcessor:
                         os.remove(file_path)
                         deleted_count += 1
 
-            logger.info(f"✅ Limpieza completada: {deleted_count} archivos eliminados")
+            logger.info(f"✅ Limpieza local completada: {deleted_count} archivos eliminados")
             return deleted_count
 
         except Exception as e:
@@ -326,11 +403,27 @@ class ImageProcessor:
     def delete_image(self, image_path: str) -> bool:
         """Eliminar imagen de forma segura"""
         try:
-            if os.path.exists(image_path):
-                os.remove(image_path)
-                logger.info(f"✅ Imagen eliminada: {image_path}")
-                return True
-            return False
+            # Verificar si es URL de R2 o archivo local
+            if image_path.startswith("http"):
+                # Es una URL de R2
+                try:
+                    from ..services.cloudflare_r2 import CloudflareR2Service
+                    r2_service = CloudflareR2Service()
+                    if r2_service.is_available():
+                        success = r2_service.delete_file(image_path)
+                        if success:
+                            logger.info(f"✅ Imagen eliminada de R2: {image_path}")
+                        return success
+                except ImportError:
+                    logger.warning("Servicio R2 no disponible para eliminar imagen")
+                    return False
+            else:
+                # Es un archivo local
+                if os.path.exists(image_path):
+                    os.remove(image_path)
+                    logger.info(f"✅ Imagen eliminada localmente: {image_path}")
+                    return True
+                return False
 
         except Exception as e:
             logger.error(f"❌ Error al eliminar imagen: {e}")
@@ -339,6 +432,19 @@ class ImageProcessor:
     def get_directory_stats(self) -> dict:
         """Obtener estadísticas de directorios de imágenes"""
         try:
+            # Si estamos usando R2, obtener stats de R2
+            use_r2 = os.getenv("USE_CLOUDFLARE_R2", "false").lower() == "true"
+
+            if use_r2:
+                try:
+                    from ..services.cloudflare_r2 import CloudflareR2Service
+                    r2_service = CloudflareR2Service()
+                    if r2_service.is_available():
+                        return r2_service.get_bucket_stats()
+                except ImportError:
+                    pass
+
+            # Stats locales
             stats = {}
 
             for category in ["reference", "recognition", "test", "temp"]:
@@ -362,8 +468,44 @@ class ImageProcessor:
                         "total_size_mb": 0.0
                     }
 
-            return stats
+            return {
+                "type": "local",
+                "categories": stats,
+                "total_files": sum(cat["file_count"] for cat in stats.values()),
+                "total_size_mb": sum(cat["total_size_mb"] for cat in stats.values())
+            }
 
         except Exception as e:
             logger.error(f"❌ Error al obtener estadísticas: {e}")
             return {}
+
+    def get_storage_type(self) -> str:
+        """Obtener tipo de almacenamiento actual"""
+        use_r2 = os.getenv("USE_CLOUDFLARE_R2", "false").lower() == "true"
+        return "Cloudflare R2" if use_r2 else "Local Storage"
+
+    async def download_from_url(self, url: str, category: str = "temp") -> str:
+        """Descargar imagen desde URL y guardarla localmente"""
+        try:
+            import requests
+
+            # Descargar imagen
+            response = requests.get(url, timeout=30)
+            response.raise_for_status()
+
+            # Generar nombre único
+            filename = f"downloaded_{uuid.uuid4().hex}.jpg"
+
+            # Guardar en directorio local
+            save_dir = os.path.join(self.upload_dir, category)
+            file_path = os.path.join(save_dir, filename)
+
+            with open(file_path, "wb") as f:
+                f.write(response.content)
+
+            logger.info(f"✅ Imagen descargada: {url} → {file_path}")
+            return file_path
+
+        except Exception as e:
+            logger.error(f"❌ Error descargando imagen: {e}")
+            raise

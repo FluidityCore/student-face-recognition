@@ -11,7 +11,7 @@ from pathlib import Path
 
 
 class SmartBulkUploader:
-    def __init__(self, api_url="http://localhost:8000"):
+    def __init__(self, api_url="https://tu-app.onrender.com"):
         self.api_url = api_url
         self.session = requests.Session()
 

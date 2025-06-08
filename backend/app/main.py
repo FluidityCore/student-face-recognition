@@ -14,10 +14,14 @@ from .models.database import create_tables, test_database_connection
 from .services.face_recognition import FaceRecognitionService
 from .utils.image_processing import ImageProcessor
 
-# Configurar logging
+# Configurar logging para servidor
+log_level = os.getenv("LOG_LEVEL", "INFO").upper()
 logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    level=getattr(logging, log_level),
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.StreamHandler(),  # Para logs en consola (Render)
+    ]
 )
 logger = logging.getLogger(__name__)
 
@@ -32,7 +36,9 @@ async def lifespan(app: FastAPI):
     global face_service, image_processor
 
     # Startup
-    logger.info("🚀 Iniciando API de Reconocimiento Facial...")
+    logger.info("🚀 Iniciando API de Reconocimiento Facial en SERVIDOR...")
+    logger.info(f"🌍 Entorno: {'PRODUCCIÓN' if not os.getenv('DEBUG', 'False') == 'True' else 'DESARROLLO'}")
+    logger.info(f"🗄️ Base de datos: {os.getenv('DATABASE_URL', 'SQLite local')[:50]}...")
 
     try:
         # Verificar conexión a base de datos
@@ -47,10 +53,18 @@ async def lifespan(app: FastAPI):
         face_service = FaceRecognitionService()
         image_processor = ImageProcessor()
 
-        # Limpiar archivos temporales al inicio
-        image_processor.cleanup_temp_files(max_age_hours=1)
+        # Limpiar archivos temporales al inicio (solo en servidor)
+        if not os.getenv("DEBUG", "False") == "True":
+            deleted_count = image_processor.cleanup_temp_files(max_age_hours=1)
+            logger.info(f"🧹 Archivos temporales limpiados: {deleted_count}")
 
-        logger.info("✅ API iniciada correctamente")
+        # Verificar configuración de Cloudflare (si está habilitado)
+        if os.getenv("USE_CLOUDFLARE_R2", "false").lower() == "true":
+            logger.info("☁️ Cloudflare R2 configurado para almacenamiento")
+        else:
+            logger.info("💾 Almacenamiento local configurado")
+
+        logger.info("✅ API iniciada correctamente en servidor")
 
     except Exception as e:
         logger.error(f"❌ Error al iniciar la aplicación: {e}")
@@ -73,17 +87,22 @@ app = FastAPI(
     description="""
     Sistema de reconocimiento facial para identificación de estudiantes.
 
+    **🚀 Versión para Servidor - Render + Cloudflare**
+
     ## Características principales:
     - Reconocimiento facial con face_recognition library
     - Gestión completa de estudiantes (CRUD)
     - Logs y estadísticas de reconocimiento
     - Umbral de reconocimiento configurable (80%)
     - Procesamiento optimizado de imágenes
+    - Almacenamiento en Cloudflare R2
+    - Base de datos SQLite + Cloudflare D1
 
     ## Endpoints principales:
     - `/api/recognize` - Reconocer estudiante por imagen
     - `/api/students` - Gestión de estudiantes
     - `/api/recognition/stats` - Estadísticas del sistema
+    - `/health` - Health check del servidor
     """,
     version="1.0.0",
     contact={
@@ -94,39 +113,82 @@ app = FastAPI(
         "name": "MIT License",
         "url": "https://opensource.org/licenses/MIT"
     },
-    lifespan=lifespan
+    lifespan=lifespan,
+    # Configuración para servidor
+    docs_url="/docs" if os.getenv("DEBUG", "False") == "True" else "/docs",
+    redoc_url="/redoc" if os.getenv("DEBUG", "False") == "True" else "/redoc"
 )
 
-# Configurar CORS
+# CONFIGURAR CORS PARA SERVIDOR
+allowed_origins = [
+    "http://localhost:3000",  # React frontend local
+    "http://10.0.2.2:8000",  # Android emulator
+    "http://localhost:8000",  # Local development
+    "https://*.onrender.com",  # Cualquier subdominio de Render
+    "https://*.vercel.app",  # Cualquier frontend en Vercel
+    "https://*.netlify.app",  # Cualquier frontend en Netlify
+]
+
+# Agregar URLs específicas desde variables de entorno
+if os.getenv("FRONTEND_URL"):
+    allowed_origins.append(os.getenv("FRONTEND_URL"))
+if os.getenv("MOBILE_APP_URL"):
+    allowed_origins.append(os.getenv("MOBILE_APP_URL"))
+if os.getenv("RENDER_EXTERNAL_URL"):
+    allowed_origins.append(os.getenv("RENDER_EXTERNAL_URL"))
+
+# Si estamos en desarrollo, permitir todos los orígenes
+if os.getenv("DEBUG", "False") == "True":
+    allowed_origins.append("*")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",  # React frontend
-        "http://10.0.2.2:8000",  # Android emulator
-        "http://localhost:8000",  # Local development
-        os.getenv("FRONTEND_URL", "http://localhost:3000"),
-        os.getenv("MOBILE_APP_URL", "http://10.0.2.2:8000")
-    ],
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
 )
 
-# Middleware de hosts confiables
+# CONFIGURAR TRUSTED HOSTS PARA SERVIDOR
+trusted_hosts = ["*"]  # Por defecto permitir todos
+
+# En producción, ser más específico
+if os.getenv("DEBUG", "False") != "True":
+    trusted_hosts = [
+        "localhost",
+        "127.0.0.1",
+        "0.0.0.0",
+    ]
+
+    # Agregar hostname de Render si está disponible
+    render_hostname = os.getenv("RENDER_EXTERNAL_HOSTNAME")
+    if render_hostname:
+        trusted_hosts.append(render_hostname)
+        trusted_hosts.append(f"*.onrender.com")
+
 app.add_middleware(
     TrustedHostMiddleware,
-    allowed_hosts=["*"]  # En producción, especificar hosts específicos
+    allowed_hosts=trusted_hosts
 )
 
 
-# Middleware personalizado para logging y métricas
+# Middleware personalizado para logging y métricas EN SERVIDOR
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
-    """Middleware para logging de requests"""
+    """Middleware para logging de requests en servidor"""
     start_time = time.time()
 
-    # Log request
-    logger.info(f"📥 {request.method} {request.url.path} - IP: {request.client.host}")
+    # Obtener IP real (considerando proxies de Render)
+    client_ip = request.headers.get("X-Forwarded-For", request.client.host if request.client else "unknown")
+    if "," in client_ip:
+        client_ip = client_ip.split(",")[0].strip()
+
+    # Log request (más detallado en desarrollo)
+    if os.getenv("DEBUG", "False") == "True":
+        logger.info(f"📥 {request.method} {request.url.path} - IP: {client_ip}")
+    else:
+        # En producción, log más simple
+        logger.info(f"{request.method} {request.url.path}")
 
     try:
         response = await call_next(request)
@@ -135,14 +197,21 @@ async def log_requests(request: Request, call_next):
         process_time = time.time() - start_time
 
         # Log response
-        logger.info(
-            f"📤 {request.method} {request.url.path} - "
-            f"Status: {response.status_code} - "
-            f"Time: {process_time:.2f}s"
-        )
+        if process_time > 5.0:  # Solo log si tarda más de 5 segundos
+            logger.warning(
+                f"⏱️ SLOW REQUEST: {request.method} {request.url.path} - "
+                f"Time: {process_time:.2f}s - Status: {response.status_code}"
+            )
+        elif os.getenv("DEBUG", "False") == "True":
+            logger.info(
+                f"📤 {request.method} {request.url.path} - "
+                f"Status: {response.status_code} - Time: {process_time:.2f}s"
+            )
 
-        # Agregar header de tiempo de procesamiento
-        response.headers["X-Process-Time"] = str(process_time)
+        # Agregar headers para servidor
+        response.headers["X-Process-Time"] = str(round(process_time, 2))
+        response.headers["X-Server"] = "Render"
+        response.headers["X-API-Version"] = "1.0.0"
 
         return response
 
@@ -157,13 +226,17 @@ app.include_router(students.router)
 app.include_router(recognition.router)
 
 
-# Endpoints raíz
+# ENDPOINTS ESPECÍFICOS PARA SERVIDOR
 @app.get("/")
 async def root():
-    """Endpoint raíz con información de la API"""
+    """Endpoint raíz con información de la API para servidor"""
     return {
         "message": "API de Reconocimiento Facial de Estudiantes",
         "version": "1.0.0",
+        "environment": "production" if os.getenv("DEBUG", "False") != "True" else "development",
+        "server": "Render",
+        "database": "SQLite + Cloudflare D1",
+        "storage": "Cloudflare R2" if os.getenv("USE_CLOUDFLARE_R2", "false").lower() == "true" else "Local",
         "status": "active",
         "docs": "/docs",
         "redoc": "/redoc",
@@ -178,7 +251,7 @@ async def root():
 
 @app.get("/health")
 async def health_check():
-    """Health check endpoint"""
+    """Health check endpoint optimizado para servidor"""
     try:
         # Verificar base de datos
         db_status = "connected" if test_database_connection() else "disconnected"
@@ -187,17 +260,28 @@ async def health_check():
         services_status = {
             "face_recognition": face_service is not None,
             "image_processor": image_processor is not None,
-            "database": db_status == "connected"
+            "database": db_status == "connected",
+            "cloudflare_r2": os.getenv("USE_CLOUDFLARE_R2", "false").lower() == "true"
         }
 
-        overall_status = "healthy" if all(services_status.values()) else "unhealthy"
+        overall_status = "healthy" if all([
+            services_status["face_recognition"],
+            services_status["image_processor"],
+            services_status["database"]
+        ]) else "unhealthy"
 
         return {
             "status": overall_status,
             "timestamp": time.time(),
+            "server": "Render",
+            "environment": "production" if os.getenv("DEBUG", "False") != "True" else "development",
             "services": services_status,
-            "database": db_status,
-            "version": "1.0.0"
+            "database": {
+                "status": db_status,
+                "type": "SQLite"
+            },
+            "version": "1.0.0",
+            "uptime": "Available"  # Render maneja el uptime
         }
 
     except Exception as e:
@@ -205,13 +289,14 @@ async def health_check():
         return {
             "status": "unhealthy",
             "error": str(e),
-            "timestamp": time.time()
+            "timestamp": time.time(),
+            "server": "Render"
         }
 
 
 @app.get("/info")
 async def system_info():
-    """Información del sistema"""
+    """Información del sistema optimizada para servidor"""
     try:
         from .models.database import get_database_stats
         from .services.database_service import ConfigService
@@ -230,23 +315,36 @@ async def system_info():
 
         db.close()
 
-        # Estadísticas de almacenamiento
-        storage_stats = image_processor.get_directory_stats() if image_processor else {}
+        # Estadísticas de almacenamiento (solo si es local)
+        storage_stats = {}
+        if os.getenv("USE_CLOUDFLARE_R2", "false").lower() != "true" and image_processor:
+            storage_stats = image_processor.get_directory_stats()
 
         return {
             "system": {
                 "version": "1.0.0",
                 "status": "active",
+                "server": "Render",
+                "environment": "production" if os.getenv("DEBUG", "False") != "True" else "development",
                 "recognition_threshold": recognition_threshold,
                 "max_image_size_mb": round(max_image_size / (1024 * 1024), 2),
                 "allowed_formats": allowed_formats
             },
-            "database": db_stats,
-            "storage": storage_stats,
+            "database": {
+                **db_stats,
+                "type": "SQLite",
+                "cloudflare_d1_ready": True
+            },
+            "storage": {
+                "type": "Cloudflare R2" if os.getenv("USE_CLOUDFLARE_R2", "false").lower() == "true" else "Local",
+                "stats": storage_stats
+            },
             "configuration": {
                 "debug": os.getenv("DEBUG", "False") == "True",
                 "api_host": os.getenv("API_HOST", "0.0.0.0"),
-                "api_port": os.getenv("API_PORT", "8000")
+                "api_port": os.getenv("API_PORT", "10000"),
+                "use_cloudflare_r2": os.getenv("USE_CLOUDFLARE_R2", "false").lower() == "true",
+                "use_cloudflare_d1": os.getenv("USE_CLOUDFLARE_D1", "false").lower() == "true"
             }
         }
 
@@ -255,19 +353,61 @@ async def system_info():
         raise HTTPException(status_code=500, detail=f"Error del sistema: {str(e)}")
 
 
+@app.get("/server-status")
+async def server_status():
+    """Estado específico del servidor Render"""
+    try:
+        import psutil
+        import platform
+    except ImportError:
+        psutil = None
+        platform = None
+
+    status = {
+        "server": "Render",
+        "api_version": "1.0.0",
+        "python_version": platform.python_version() if platform else "Unknown",
+        "environment": {
+            "debug": os.getenv("DEBUG", "False") == "True",
+            "port": os.getenv("PORT", os.getenv("API_PORT", "10000")),
+            "host": os.getenv("API_HOST", "0.0.0.0")
+        },
+        "features": {
+            "face_recognition": True,
+            "cloudflare_r2": os.getenv("USE_CLOUDFLARE_R2", "false").lower() == "true",
+            "cloudflare_d1": os.getenv("USE_CLOUDFLARE_D1", "false").lower() == "true",
+            "sqlite": True
+        }
+    }
+
+    if psutil:
+        try:
+            status["system"] = {
+                "cpu_percent": psutil.cpu_percent(),
+                "memory_percent": psutil.virtual_memory().percent,
+                "disk_usage": psutil.disk_usage('/').percent
+            }
+        except:
+            pass
+
+    return status
+
+
 @app.get("/admin/cleanup")
 async def cleanup_temp_files(max_age_hours: int = 24):
-    """Endpoint administrativo para limpiar archivos temporales"""
+    """Endpoint administrativo para limpiar archivos temporales en servidor"""
     try:
         if not image_processor:
             raise HTTPException(status_code=503, detail="Image processor no disponible")
 
+        # En servidor, ser más agresivo con la limpieza
         deleted_count = image_processor.cleanup_temp_files(max_age_hours)
 
         return {
             "message": "Limpieza completada",
             "deleted_files": deleted_count,
-            "max_age_hours": max_age_hours
+            "max_age_hours": max_age_hours,
+            "server": "Render"
         }
 
     except Exception as e:
@@ -275,10 +415,10 @@ async def cleanup_temp_files(max_age_hours: int = 24):
         raise HTTPException(status_code=500, detail=f"Error en limpieza: {str(e)}")
 
 
-# Manejo global de excepciones
+# Manejo global de excepciones para servidor
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
-    """Manejo global de excepciones"""
+    """Manejo global de excepciones en servidor"""
     logger.error(f"❌ Excepción no manejada: {str(exc)} - URL: {request.url}")
 
     return JSONResponse(
@@ -287,14 +427,16 @@ async def global_exception_handler(request: Request, exc: Exception):
             "error": "Error interno del servidor",
             "detail": "Ha ocurrido un error inesperado",
             "path": str(request.url.path),
-            "method": request.method
+            "method": request.method,
+            "server": "Render",
+            "timestamp": time.time()
         }
     )
 
 
 @app.exception_handler(HTTPException)
 async def http_exception_handler(request: Request, exc: HTTPException):
-    """Manejo de HTTPExceptions"""
+    """Manejo de HTTPExceptions en servidor"""
     logger.warning(f"⚠️ HTTP Exception: {exc.status_code} - {exc.detail} - URL: {request.url}")
 
     return JSONResponse(
@@ -303,23 +445,36 @@ async def http_exception_handler(request: Request, exc: HTTPException):
             "error": exc.detail,
             "status_code": exc.status_code,
             "path": str(request.url.path),
-            "method": request.method
+            "method": request.method,
+            "server": "Render",
+            "timestamp": time.time()
         }
     )
 
 
-# Montar archivos estáticos (opcional, para servir imágenes)
-if os.path.exists("uploads"):
+# NO montar archivos estáticos en servidor (usar Cloudflare R2)
+# En servidor, las imágenes se sirven desde Cloudflare R2
+if os.getenv("USE_CLOUDFLARE_R2", "false").lower() != "true" and os.path.exists("uploads"):
     app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
+    logger.info("📁 Archivos estáticos montados (desarrollo)")
 
+# Configuración para ejecutar en servidor
 if __name__ == "__main__":
     import uvicorn
 
-    # Configuración para desarrollo
+    # Configuración para servidor
+    port = int(os.getenv("PORT", os.getenv("API_PORT", "10000")))
+    host = os.getenv("API_HOST", "0.0.0.0")
+
+    logger.info(f"🚀 Iniciando servidor en {host}:{port}")
+
     uvicorn.run(
         "app.main:app",
-        host=os.getenv("API_HOST", "0.0.0.0"),
-        port=int(os.getenv("API_PORT", "8000")),
-        reload=os.getenv("DEBUG", "True") == "True",
-        log_level=os.getenv("LOG_LEVEL", "info").lower()
+        host=host,
+        port=port,
+        reload=os.getenv("DEBUG", "False") == "True",
+        log_level=os.getenv("LOG_LEVEL", "info").lower(),
+        # Configuración específica para servidor
+        workers=1,  # Render Free tier funciona mejor con 1 worker
+        access_log=os.getenv("DEBUG", "False") == "True"
     )

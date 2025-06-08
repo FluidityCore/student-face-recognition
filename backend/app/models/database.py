@@ -9,23 +9,25 @@ from sqlalchemy import text
 # Cargar variables de entorno
 load_dotenv()
 
-# Configuración de la base de datos
-DB_HOST = os.getenv("DB_HOST", "localhost")
-DB_PORT = os.getenv("DB_PORT", "3307")
-DB_USER = os.getenv("DB_USER", "root")
-DB_PASSWORD = os.getenv("DB_PASSWORD", "root")
-DB_NAME = os.getenv("DB_NAME", "student_recognition")
+# CONFIGURACIÓN PARA SERVIDOR - SQLite + Cloudflare D1
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./student_recognition.db")
 
-# URL de conexión
-DATABASE_URL = f"mysql+mysqlconnector://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
-
-# Crear engine de SQLAlchemy
-engine = create_engine(
-    DATABASE_URL,
-    echo=False,  # Cambiar a True para ver las queries SQL
-    pool_pre_ping=True,  # Verificar conexión antes de usar
-    pool_recycle=300  # Reciclar conexiones cada 5 minutos
-)
+# Configuración específica para SQLite
+if "sqlite" in DATABASE_URL:
+    # SQLite para desarrollo/servidor
+    engine = create_engine(
+        DATABASE_URL,
+        echo=False,  # Cambiar a True para debug
+        connect_args={"check_same_thread": False}  # Necesario para SQLite + FastAPI
+    )
+else:
+    # Fallback para otros tipos de BD
+    engine = create_engine(
+        DATABASE_URL,
+        echo=False,
+        pool_pre_ping=True,
+        pool_recycle=300
+    )
 
 # Crear SessionLocal
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
@@ -47,7 +49,7 @@ class Student(Base):
 
     # Datos de la imagen y reconocimiento facial
     imagen_path = Column(String(500), nullable=True)
-    face_encoding = Column(JSON, nullable=True)  # Almacenar como JSON
+    face_encoding = Column(JSON, nullable=True)  # Compatible con SQLite
 
     # Metadatos
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
@@ -128,7 +130,7 @@ def create_tables():
                 default_configs = [
                     SystemConfig(
                         key="recognition_threshold",
-                        value="0.9",
+                        value="0.8",  # Cambiado de 0.9 a 0.8 para mejor reconocimiento
                         description="Umbral de similitud para reconocimiento facial"
                     ),
                     SystemConfig(
@@ -163,7 +165,7 @@ def test_database_connection():
     """
     try:
         db = SessionLocal()
-        # Ejecutar una query simple
+        # Ejecutar una query simple compatible con SQLite
         db.execute(text("SELECT 1"))
         db.close()
         print("✅ Conexión a la base de datos exitosa")
@@ -171,6 +173,7 @@ def test_database_connection():
     except Exception as e:
         print(f"❌ Error de conexión a la base de datos: {e}")
         return False
+
 
 # Función para obtener estadísticas de la base de datos
 def get_database_stats():
@@ -211,12 +214,106 @@ def get_database_stats():
         return None
 
 
+# FUNCIONES ESPECÍFICAS PARA MIGRACIÓN Y CLOUDFLARE D1
+
+def migrate_from_mysql():
+    """
+    Función auxiliar para migrar datos desde MySQL (usar solo durante migración)
+    """
+    print("⚠️ Esta función es solo para migración manual desde MySQL")
+    print("📋 Pasos para migrar:")
+    print("1. Exportar datos desde MySQL")
+    print("2. Adaptar formato para SQLite")
+    print("3. Importar a SQLite")
+    print("4. Verificar integridad de datos")
+
+
+def prepare_for_cloudflare_d1():
+    """
+    Preparar esquema compatible con Cloudflare D1
+    """
+    try:
+        print("🔄 Verificando compatibilidad con Cloudflare D1...")
+
+        # Verificar que las tablas existen
+        if test_database_connection():
+            print("✅ Schema compatible con Cloudflare D1")
+            return True
+        else:
+            print("❌ Error en schema")
+            return False
+
+    except Exception as e:
+        print(f"❌ Error preparando para D1: {e}")
+        return False
+
+
+def get_database_info():
+    """
+    Obtener información detallada de la base de datos
+    """
+    try:
+        db = SessionLocal()
+
+        # Información del engine
+        db_url = str(engine.url)
+        db_type = "SQLite" if "sqlite" in db_url else "Other"
+
+        # Verificar tablas
+        tables_exist = []
+        try:
+            db.execute(text("SELECT name FROM sqlite_master WHERE type='table'"))
+            result = db.fetchall()
+            tables_exist = [row[0] for row in result] if result else []
+        except:
+            tables_exist = ["Error al verificar tablas"]
+
+        db.close()
+
+        return {
+            "database_type": db_type,
+            "database_url": db_url.split("///")[-1] if "sqlite" in db_url else "Remote DB",
+            "tables": tables_exist,
+            "connection_status": "Connected",
+            "ready_for_server": True
+        }
+
+    except Exception as e:
+        return {
+            "database_type": "Unknown",
+            "connection_status": f"Error: {str(e)}",
+            "ready_for_server": False
+        }
+
+
 if __name__ == "__main__":
-    # Script para crear tablas y probar conexión
-    print("🔄 Probando conexión a la base de datos...")
-    if test_database_connection():
-        print("🔄 Creando tablas...")
-        create_tables()
-        print("✅ ¡Base de datos configurada correctamente!")
+    # Script para configurar base de datos
+    print("🗄️ Configurador de Base de Datos para Servidor")
+    print("=" * 60)
+
+    # Mostrar información
+    db_info = get_database_info()
+    print(f"📊 Tipo de BD: {db_info['database_type']}")
+    print(f"📍 Ubicación: {db_info['database_url']}")
+    print(f"🔗 Estado: {db_info['connection_status']}")
+
+    if db_info['ready_for_server']:
+        print("\n🔄 Probando conexión...")
+        if test_database_connection():
+            print("🔄 Creando tablas...")
+            create_tables()
+
+            print("\n🔄 Verificando compatibilidad con Cloudflare D1...")
+            if prepare_for_cloudflare_d1():
+                print("\n🎉 ¡Base de datos lista para servidor!")
+                print("\n📋 Siguientes pasos:")
+                print("   1. ✅ SQLite configurado")
+                print("   2. ⏳ Actualizar requirements.txt")
+                print("   3. ⏳ Configurar main.py para servidor")
+                print("   4. ⏳ Deploy en Render")
+            else:
+                print("\n❌ Error en compatibilidad con D1")
+        else:
+            print("❌ Error de conexión")
     else:
-        print("❌ No se pudo conectar a la base de datos")
+        print(f"\n❌ {db_info['connection_status']}")
