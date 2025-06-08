@@ -41,6 +41,10 @@ class CloudflareD1Service:
                 "params": params or []
             }
 
+            logger.info(f"🔍 Ejecutando query D1: {sql}")
+            if params:
+                logger.info(f"📊 Parámetros: {params}")
+
             response = requests.post(
                 f"{self.base_url}/query",
                 headers=self.headers,
@@ -48,10 +52,18 @@ class CloudflareD1Service:
                 timeout=30
             )
 
+            logger.info(f"📡 Response status: {response.status_code}")
+
             if response.status_code == 200:
                 result = response.json()
+                logger.info(f"📊 Response result: {result}")
+
                 if result.get("success"):
-                    return result.get("result", [])[0] if result.get("result") else {}
+                    query_result = result.get("result", [])
+                    if query_result:
+                        return query_result[0] if query_result else {}
+                    else:
+                        return {"results": [], "meta": {}}
                 else:
                     raise Exception(f"D1 Error: {result.get('errors', 'Unknown error')}")
             else:
@@ -64,9 +76,9 @@ class CloudflareD1Service:
     def create_student(self, student_data: Dict[str, Any]) -> int:
         """Crear estudiante en D1"""
         sql = """
-              INSERT INTO estudiantes (nombre, apellidos, codigo, correo, requisitoriado, imagen_path, face_encoding, \
+              INSERT INTO estudiantes (nombre, apellidos, codigo, correo, requisitoriado, imagen_path, face_encoding,
                                        created_at, updated_at, active)
-              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) \
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
               """
 
         params = [
@@ -86,10 +98,66 @@ class CloudflareD1Service:
         return result.get("meta", {}).get("last_row_id")
 
     def get_all_students(self) -> List[Dict[str, Any]]:
-        """Obtener todos los estudiantes de D1"""
-        sql = "SELECT * FROM estudiantes WHERE active = 1"
-        result = self.execute_query(sql)
-        return result.get("results", [])
+        """
+        ✅ FIX: Obtener todos los estudiantes de D1 - CORREGIDO
+        """
+        try:
+            sql = "SELECT * FROM estudiantes WHERE active = 1"
+            logger.info("🔍 Ejecutando get_all_students en D1...")
+
+            result = self.execute_query(sql)
+
+            # ✅ FIX: Verificar la estructura de respuesta
+            logger.info(f"📊 Raw D1 response: {result}")
+
+            # La respuesta puede venir en diferentes formatos
+            students = []
+
+            if isinstance(result, dict):
+                if "results" in result:
+                    students = result["results"]
+                elif "data" in result:
+                    students = result["data"]
+                else:
+                    # Si result tiene datos directamente
+                    if "id" in result:  # Es un solo estudiante
+                        students = [result]
+                    else:
+                        students = []
+            elif isinstance(result, list):
+                students = result
+            else:
+                logger.warning(f"⚠️ Formato de respuesta D1 no reconocido: {type(result)}")
+                students = []
+
+            logger.info(f"✅ Estudiantes obtenidos de D1: {len(students)}")
+
+            # ✅ FIX: Log de muestra para debugging
+            if students:
+                logger.info(f"📊 Muestra de estudiante: {students[0]}")
+            else:
+                logger.warning("⚠️ No se encontraron estudiantes en D1")
+
+                # ✅ FIX: Verificar si la tabla existe y tiene datos
+                try:
+                    count_result = self.execute_query("SELECT COUNT(*) as count FROM estudiantes")
+                    total_count = count_result.get("results", [{}])[0].get("count", 0)
+                    logger.info(f"📊 Total estudiantes en tabla: {total_count}")
+
+                    if total_count > 0:
+                        # Hay datos pero el query anterior falló, intentar sin filtro
+                        logger.info("🔄 Reintentando sin filtro active...")
+                        all_result = self.execute_query("SELECT * FROM estudiantes LIMIT 5")
+                        logger.info(f"📊 Query sin filtro: {all_result}")
+
+                except Exception as e:
+                    logger.error(f"❌ Error verificando tabla: {e}")
+
+            return students
+
+        except Exception as e:
+            logger.error(f"❌ Error al obtener estudiantes de D1: {e}")
+            return []
 
     def get_student_by_id(self, student_id: int) -> Optional[Dict[str, Any]]:
         """Obtener estudiante por ID"""
@@ -139,9 +207,9 @@ class CloudflareD1Service:
     def create_recognition_log(self, log_data: Dict[str, Any]) -> int:
         """Crear log de reconocimiento en D1"""
         sql = """
-              INSERT INTO recognition_logs (found, student_id, similarity, confidence, processing_time, image_path, \
+              INSERT INTO recognition_logs (found, student_id, similarity, confidence, processing_time, image_path,
                                             ip_address, user_agent, timestamp)
-              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) \
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
               """
 
         params = [
@@ -164,13 +232,13 @@ class CloudflareD1Service:
         try:
             # Query para estadísticas básicas
             stats_sql = """
-                        SELECT COUNT(*)                                              as total_recognitions, \
-                               SUM(CASE WHEN found = 1 THEN 1 ELSE 0 END)            as successful_recognitions, \
-                               AVG(processing_time)                                  as avg_processing_time, \
-                               SUM(CASE WHEN confidence = 'Alta' THEN 1 ELSE 0 END)  as high_confidence, \
-                               SUM(CASE WHEN confidence = 'Media' THEN 1 ELSE 0 END) as medium_confidence, \
+                        SELECT COUNT(*)                                              as total_recognitions,
+                               SUM(CASE WHEN found = 1 THEN 1 ELSE 0 END)            as successful_recognitions,
+                               AVG(processing_time)                                  as avg_processing_time,
+                               SUM(CASE WHEN confidence = 'Alta' THEN 1 ELSE 0 END)  as high_confidence,
+                               SUM(CASE WHEN confidence = 'Media' THEN 1 ELSE 0 END) as medium_confidence,
                                SUM(CASE WHEN confidence = 'Baja' THEN 1 ELSE 0 END)  as low_confidence
-                        FROM recognition_logs \
+                        FROM recognition_logs
                         """
 
             result = self.execute_query(stats_sql)
@@ -208,91 +276,91 @@ class CloudflareD1Service:
         try:
             # Crear tabla de estudiantes
             students_sql = """
-                           CREATE TABLE IF NOT EXISTS estudiantes \
-                           ( \
-                               id \
-                               INTEGER \
-                               PRIMARY \
-                               KEY \
-                               AUTOINCREMENT, \
-                               nombre \
-                               TEXT \
-                               NOT \
-                               NULL, \
-                               apellidos \
-                               TEXT \
-                               NOT \
-                               NULL, \
-                               codigo \
-                               TEXT \
-                               UNIQUE \
-                               NOT \
-                               NULL, \
-                               correo \
-                               TEXT, \
-                               requisitoriado \
-                               BOOLEAN \
-                               DEFAULT \
-                               FALSE, \
-                               imagen_path \
-                               TEXT, \
-                               face_encoding \
-                               TEXT, \
-                               created_at \
-                               TEXT \
-                               NOT \
-                               NULL, \
-                               updated_at \
-                               TEXT \
-                               NOT \
-                               NULL, \
-                               active \
-                               BOOLEAN \
-                               DEFAULT \
+                           CREATE TABLE IF NOT EXISTS estudiantes
+                           (
+                               id
+                               INTEGER
+                               PRIMARY
+                               KEY
+                               AUTOINCREMENT,
+                               nombre
+                               TEXT
+                               NOT
+                               NULL,
+                               apellidos
+                               TEXT
+                               NOT
+                               NULL,
+                               codigo
+                               TEXT
+                               UNIQUE
+                               NOT
+                               NULL,
+                               correo
+                               TEXT,
+                               requisitoriado
+                               BOOLEAN
+                               DEFAULT
+                               FALSE,
+                               imagen_path
+                               TEXT,
+                               face_encoding
+                               TEXT,
+                               created_at
+                               TEXT
+                               NOT
+                               NULL,
+                               updated_at
+                               TEXT
+                               NOT
+                               NULL,
+                               active
+                               BOOLEAN
+                               DEFAULT
                                TRUE
-                           ) \
+                           )
                            """
 
             # Crear tabla de logs
             logs_sql = """
-                       CREATE TABLE IF NOT EXISTS recognition_logs \
-                       ( \
-                           id \
-                           INTEGER \
-                           PRIMARY \
-                           KEY \
-                           AUTOINCREMENT, \
-                           found \
-                           BOOLEAN \
-                           NOT \
-                           NULL, \
-                           student_id \
-                           INTEGER, \
-                           similarity \
-                           REAL \
-                           NOT \
-                           NULL \
-                           DEFAULT \
-                           0.0, \
-                           confidence \
-                           TEXT \
-                           NOT \
-                           NULL, \
-                           processing_time \
-                           REAL \
-                           NOT \
-                           NULL, \
-                           image_path \
-                           TEXT, \
-                           ip_address \
-                           TEXT, \
-                           user_agent \
-                           TEXT, \
-                           timestamp \
-                           TEXT \
-                           NOT \
+                       CREATE TABLE IF NOT EXISTS recognition_logs
+                       (
+                           id
+                           INTEGER
+                           PRIMARY
+                           KEY
+                           AUTOINCREMENT,
+                           found
+                           BOOLEAN
+                           NOT
+                           NULL,
+                           student_id
+                           INTEGER,
+                           similarity
+                           REAL
+                           NOT
                            NULL
-                       ) \
+                           DEFAULT
+                           0.0,
+                           confidence
+                           TEXT
+                           NOT
+                           NULL,
+                           processing_time
+                           REAL
+                           NOT
+                           NULL,
+                           image_path
+                           TEXT,
+                           ip_address
+                           TEXT,
+                           user_agent
+                           TEXT,
+                           timestamp
+                           TEXT
+                           NOT
+                           NULL
+                       )
                        """
 
             # Crear índices
@@ -324,8 +392,16 @@ class CloudflareD1Service:
 
         try:
             result = self.execute_query("SELECT 1 as test")
-            return result.get("results", [{}])[0].get("test") == 1
-        except:
+            # ✅ FIX: Verificar respuesta correctamente
+            if isinstance(result, dict):
+                if "results" in result:
+                    test_results = result["results"]
+                    return len(test_results) > 0 and test_results[0].get("test") == 1
+                else:
+                    return result.get("test") == 1
+            return False
+        except Exception as e:
+            logger.error(f"❌ Error en test_connection: {e}")
             return False
 
     def migrate_from_sqlite(self, sqlite_students: List[Dict], sqlite_logs: List[Dict]) -> Dict[str, int]:

@@ -80,6 +80,11 @@ class CloudflareAdapter:
                 # Usar D1
                 student_id = self.d1_service.create_student(student_data)
                 student = self.d1_service.get_student_by_id(student_id)
+
+                # ✅ FIX: Verificar que student no sea None
+                if student is None:
+                    raise Exception(f"No se pudo recuperar el estudiante creado con ID {student_id}")
+
                 return self._format_student_response(student)
             else:
                 # Usar SQLite local
@@ -105,11 +110,40 @@ class CloudflareAdapter:
         """Obtener todos los estudiantes"""
         try:
             if self.d1_available:
-                students = self.d1_service.get_all_students()
-                return [self._format_student_response(s) for s in students]
+                logger.info("🔍 Obteniendo estudiantes desde Cloudflare D1...")
+                students_raw = self.d1_service.get_all_students()
+                logger.info(f"📊 D1 raw response: {len(students_raw)} estudiantes")
+
+                # ✅ FIX: Verificar que tenemos datos
+                if not students_raw:
+                    logger.warning("⚠️ D1 devolvió array vacío, verificando consulta directa...")
+
+                    # Intentar consulta directa
+                    try:
+                        result = self.d1_service.execute_query("SELECT * FROM estudiantes WHERE active = 1")
+                        students_raw = result.get("results", [])
+                        logger.info(f"📊 Consulta directa D1: {len(students_raw)} estudiantes")
+                    except Exception as e:
+                        logger.error(f"❌ Error en consulta directa D1: {e}")
+                        students_raw = []
+
+                # Formatear respuestas
+                students = []
+                for student_data in students_raw:
+                    try:
+                        formatted = self._format_student_response(student_data)
+                        if formatted:  # Solo agregar si el formateo fue exitoso
+                            students.append(formatted)
+                    except Exception as e:
+                        logger.error(f"❌ Error formateando estudiante {student_data}: {e}")
+                        continue
+
+                logger.info(f"✅ Estudiantes formateados exitosamente: {len(students)}")
+                return students
             else:
                 students = self.student_service.get_all_students(db)
                 return [self._format_student_response(s.__dict__) for s in students]
+
         except Exception as e:
             logger.error(f"❌ Error obteniendo estudiantes: {e}")
             return []
@@ -119,10 +153,19 @@ class CloudflareAdapter:
         try:
             if self.d1_available:
                 student = self.d1_service.get_student_by_id(student_id)
-                return self._format_student_response(student) if student else None
+
+                # ✅ FIX: Verificar None antes de formatear
+                if student is None:
+                    logger.warning(f"⚠️ Estudiante {student_id} no encontrado en D1")
+                    return None
+
+                return self._format_student_response(student)
             else:
                 student = self.student_service.get_student(db, student_id)
-                return self._format_student_response(student.__dict__) if student else None
+                if student is None:
+                    return None
+                return self._format_student_response(student.__dict__)
+
         except Exception as e:
             logger.error(f"❌ Error obteniendo estudiante {student_id}: {e}")
             return None
@@ -132,12 +175,21 @@ class CloudflareAdapter:
         try:
             if self.d1_available:
                 student = self.d1_service.get_student_by_codigo(codigo)
-                return self._format_student_response(student) if student else None
+
+                # ✅ FIX: Verificar None antes de formatear
+                if student is None:
+                    logger.warning(f"⚠️ Estudiante con código {codigo} no encontrado en D1")
+                    return None
+
+                return self._format_student_response(student)
             else:
                 student = self.student_service.get_student_by_codigo(db, codigo)
-                return self._format_student_response(student.__dict__) if student else None
+                if student is None:
+                    return None
+                return self._format_student_response(student.__dict__)
+
         except Exception as e:
-            logger.error(f"❌ Error obteniendo estudiante {codigo}: {e}")
+            logger.error(f"❌ Error obteniendo estudiante por código {codigo}: {e}")
             return None
 
     def update_student(self, db: Session, student_id: int, update_data: Dict[str, Any],
@@ -169,7 +221,7 @@ class CloudflareAdapter:
                     from ..utils.image_processing import ImageProcessor
                     image_processor = ImageProcessor()
                     new_image = image_processor.save_image(image_file, "reference")
-                
+
                 update_data["imagen_path"] = new_image
 
             # Actualizar en base de datos
@@ -177,13 +229,21 @@ class CloudflareAdapter:
                 success = self.d1_service.update_student(student_id, update_data)
                 if success:
                     student = self.d1_service.get_student_by_id(student_id)
+
+                    # ✅ FIX: Verificar None antes de formatear
+                    if student is None:
+                        logger.error(f"❌ No se pudo recuperar estudiante actualizado {student_id}")
+                        return None
+
                     return self._format_student_response(student)
                 return None
             else:
                 from ..models.schemas import StudentUpdate
                 student_update = StudentUpdate(**update_data)
                 student = self.student_service.update_student(db, student_id, student_update)
-                return self._format_student_response(student.__dict__) if student else None
+                if student is None:
+                    return None
+                return self._format_student_response(student.__dict__)
 
         except Exception as e:
             logger.error(f"❌ Error actualizando estudiante {student_id}: {e}")
@@ -376,22 +436,63 @@ class CloudflareAdapter:
     # MÉTODOS AUXILIARES
     # ==========================================
 
-    def _format_student_response(self, student_data: Union[Dict, Any]) -> Dict[str, Any]:
+    def _format_student_response(self, student_data: Union[Dict, Any]) -> Optional[Dict[str, Any]]:
         """Formatear respuesta de estudiante"""
+        # ✅ FIX: Manejar None correctamente
+        if student_data is None:
+            logger.warning("⚠️ _format_student_response recibió None")
+            return None
+
+        # ✅ FIX: Verificar que tenemos datos válidos
         if isinstance(student_data, dict):
             data = student_data.copy()
+        elif hasattr(student_data, '__dict__'):
+            data = student_data.__dict__.copy()
         else:
-            data = student_data
+            logger.error(f"❌ Tipo de datos no válido para estudiante: {type(student_data)}")
+            return None
+
+        # ✅ FIX: Verificar campos obligatorios
+        required_fields = ['id', 'nombre', 'apellidos', 'codigo']
+        missing_fields = [field for field in required_fields if field not in data or data[field] is None]
+
+        if missing_fields:
+            logger.error(f"❌ Campos obligatorios faltantes en estudiante: {missing_fields}")
+            return None
 
         # Parsear face_encoding si es string JSON
         if isinstance(data.get("face_encoding"), str):
             try:
                 import json
                 data["face_encoding"] = json.loads(data["face_encoding"])
-            except:
+            except Exception as e:
+                logger.warning(f"⚠️ Error parseando face_encoding: {e}")
                 data["face_encoding"] = None
 
-        return data
+        # ✅ FIX: Asegurar tipos correctos
+        try:
+            # Convertir fechas si son strings
+            for date_field in ['created_at', 'updated_at']:
+                if date_field in data and isinstance(data[date_field], str):
+                    try:
+                        from datetime import datetime
+                        data[date_field] = datetime.fromisoformat(data[date_field].replace('Z', '+00:00'))
+                    except:
+                        # Si no se puede parsear, usar datetime actual
+                        from datetime import datetime
+                        data[date_field] = datetime.utcnow()
+
+            # Asegurar valores por defecto
+            data.setdefault('active', True)
+            data.setdefault('requisitoriado', False)
+            data.setdefault('correo', None)
+            data.setdefault('imagen_path', None)
+
+            return data
+
+        except Exception as e:
+            logger.error(f"❌ Error formateando datos de estudiante: {e}")
+            return None
 
     def _student_to_dict(self, student: Student) -> Dict[str, Any]:
         """Convertir modelo Student a diccionario"""
