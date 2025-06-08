@@ -6,17 +6,16 @@ import time
 
 from ..models.database import get_db
 from ..models.schemas import RecognitionResult, RecognitionLog
-from ..services.database_service import StudentService, LogService
+from ..services.cloudflare_adapter import CloudflareAdapter  # ✅ CAMBIO PRINCIPAL
 from ..services.face_recognition import FaceRecognitionService
 from ..utils.image_processing import ImageProcessor
 
 router = APIRouter(prefix="/api", tags=["recognition"])
 
-# Servicios
-student_service = StudentService()
+# ✅ USAR CLOUDFLARE ADAPTER EN LUGAR DE SERVICIOS DIRECTOS
+adapter = CloudflareAdapter()
 face_service = FaceRecognitionService()
 image_processor = ImageProcessor()
-log_service = LogService()
 
 
 @router.post("/recognize", response_model=RecognitionResult)
@@ -47,33 +46,49 @@ async def recognize_student(
                 os.remove(temp_image_path)
             raise HTTPException(status_code=400, detail="No se detectó un rostro en la imagen")
 
-        # Obtener todos los estudiantes para comparación
-        students = student_service.get_all_students(db)
+        # ✅ USAR ADAPTER PARA OBTENER ESTUDIANTES
+        students = adapter.get_all_students(db)
 
         if not students:
             raise HTTPException(status_code=404, detail="No hay estudiantes registrados en el sistema")
 
+        # Convertir students dict a objetos Student para face_service
+        from ..models.database import Student
+        student_objects = []
+        for student_data in students:
+            # Crear objeto Student temporal para reconocimiento
+            student_obj = Student(
+                id=student_data['id'],
+                nombre=student_data['nombre'],
+                apellidos=student_data['apellidos'],
+                codigo=student_data['codigo'],
+                correo=student_data.get('correo'),
+                requisitoriado=student_data.get('requisitoriado', False),
+                imagen_path=student_data.get('imagen_path'),
+                face_encoding=student_data.get('face_encoding'),
+                created_at=student_data.get('created_at'),
+                updated_at=student_data.get('updated_at'),
+                active=student_data.get('active', True)
+            )
+            student_objects.append(student_obj)
+
         # Realizar reconocimiento
-        recognition_result = await face_service.recognize_face(face_encoding, students)
+        recognition_result = await face_service.recognize_face(face_encoding, student_objects)
 
         # Calcular tiempo de procesamiento
         processing_time = time.time() - start_time
 
-        # Registrar en logs
-        log_data = RecognitionLog(
-            found=recognition_result["found"],
-            student_id=recognition_result.get("student", {}).get("id") if recognition_result["found"] else None,
-            similarity=recognition_result.get("similarity", 0.0),
-            confidence=recognition_result.get("confidence", "Baja"),
-            processing_time=processing_time,
-            image_path=temp_image_path
-        )
+        # ✅ USAR ADAPTER PARA LOGS
+        log_data = {
+            "found": recognition_result["found"],
+            "student_id": recognition_result.get("student", {}).get("id") if recognition_result["found"] else None,
+            "similarity": recognition_result.get("similarity", 0.0),
+            "confidence": recognition_result.get("confidence", "Baja"),
+            "processing_time": processing_time,
+            "image_path": temp_image_path
+        }
 
-        log_service.create_recognition_log(db, log_data)
-
-        # Limpiar imagen temporal (opcional, se puede mantener para logs)
-        # if temp_image_path and os.path.exists(temp_image_path):
-        #     os.remove(temp_image_path)
+        adapter.create_recognition_log(db, log_data)
 
         # Agregar información adicional al resultado
         result = RecognitionResult(
@@ -105,7 +120,8 @@ def get_recognition_stats(db: Session = Depends(get_db)):
     Obtener estadísticas de reconocimiento
     """
     try:
-        stats = log_service.get_recognition_stats(db)
+        # ✅ USAR ADAPTER PARA STATS
+        stats = adapter.get_recognition_stats(db)
         return stats
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error al obtener estadísticas: {str(e)}")
@@ -121,12 +137,14 @@ def get_recognition_logs(
     Obtener logs de reconocimiento
     """
     try:
-        logs = log_service.get_recognition_logs(db, skip=skip, limit=limit)
+        # ✅ USAR SERVICIOS DESDE ADAPTER
+        logs = adapter.log_service.get_recognition_logs(db, skip=skip, limit=limit)
         return logs
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error al obtener logs: {str(e)}")
 
 
+# Los demás endpoints permanecen igual...
 @router.post("/test-face-detection")
 async def test_face_detection(image: UploadFile = File(...)):
     """
@@ -254,6 +272,8 @@ async def debug_similarity(
                     os.remove(path)
                 except:
                     pass  # Ignorar errores de limpieza
+
+
 @router.get("/health")
 def health_check():
     """

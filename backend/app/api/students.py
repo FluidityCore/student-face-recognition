@@ -9,14 +9,14 @@ import logging
 
 from ..models.database import get_db
 from ..models.schemas import StudentCreate, StudentResponse, StudentUpdate
-from ..services.database_service import StudentService
+from ..services.cloudflare_adapter import CloudflareAdapter  # ✅ CAMBIO PRINCIPAL
 from ..services.face_recognition import FaceRecognitionService
 from ..utils.image_processing import ImageProcessor
 
 router = APIRouter(prefix="/api/students", tags=["students"])
 
-# Servicios
-student_service = StudentService()
+# ✅ USAR CLOUDFLARE ADAPTER EN LUGAR DE SERVICIOS DIRECTOS
+adapter = CloudflareAdapter()
 face_service = FaceRecognitionService()
 image_processor = ImageProcessor()
 
@@ -47,8 +47,8 @@ async def create_student(
         if not image_processor.is_valid_image(image):
             raise HTTPException(status_code=400, detail="Formato de imagen no válido")
 
-        # 2. VERIFICAR QUE EL CÓDIGO NO EXISTA
-        existing_student = student_service.get_student_by_codigo(db, codigo)
+        # 2. ✅ VERIFICAR QUE EL CÓDIGO NO EXISTA USANDO ADAPTER
+        existing_student = adapter.get_student_by_codigo(db, codigo)
         if existing_student:
             raise HTTPException(status_code=400, detail="El código de estudiante ya existe")
 
@@ -92,22 +92,24 @@ async def create_student(
             logger.error(f"❌ Error al subir a R2: {e}")
             raise HTTPException(status_code=500, detail=f"Error al subir imagen: {str(e)}")
 
-        # 7. CREAR ESTUDIANTE EN BASE DE DATOS
-        logger.info("💾 Guardando estudiante en base de datos...")
-        student_data = StudentCreate(
-            nombre=nombre,
-            apellidos=apellidos,
-            codigo=codigo,
-            correo=correo,
-            requisitoriado=requisitoriado,
-            imagen_path=image_url,  # URL de Cloudflare R2
-            face_encoding=face_encoding.tolist()  # Convertir numpy array a lista
-        )
+        # 7. ✅ CREAR ESTUDIANTE USANDO ADAPTER
+        logger.info("💾 Guardando estudiante usando CloudflareAdapter...")
+        student_data = {
+            "nombre": nombre,
+            "apellidos": apellidos,
+            "codigo": codigo,
+            "correo": correo,
+            "requisitoriado": requisitoriado,
+            "imagen_path": image_url,  # URL de Cloudflare R2
+            "face_encoding": face_encoding.tolist()  # Convertir numpy array a lista
+        }
 
-        student = student_service.create_student(db, student_data)
+        student = adapter.create_student(db, student_data, None)  # None porque ya procesamos la imagen
 
-        logger.info(f"✅ Estudiante creado exitosamente: ID {student.id}")
-        return student
+        logger.info(f"✅ Estudiante creado exitosamente: ID {student.get('id', 'unknown')}")
+
+        # Convertir a formato de respuesta
+        return StudentResponse(**student)
 
     except HTTPException:
         # Re-lanzar HTTPExceptions sin modificar
@@ -137,7 +139,14 @@ def get_all_students(
     """
     Obtener lista de todos los estudiantes
     """
-    students = student_service.get_students(db, skip=skip, limit=limit)
+    # ✅ USAR ADAPTER EN LUGAR DE SERVICIO DIRECTO
+    students_data = adapter.get_all_students(db)
+
+    # Aplicar paginación manual (ya que get_all_students no tiene skip/limit)
+    paginated_students = students_data[skip:skip + limit]
+
+    # Convertir a formato de respuesta
+    students = [StudentResponse(**student) for student in paginated_students]
     return students
 
 
@@ -146,10 +155,12 @@ def get_student(student_id: int, db: Session = Depends(get_db)):
     """
     Obtener un estudiante por ID
     """
-    student = student_service.get_student(db, student_id)
-    if not student:
+    # ✅ USAR ADAPTER
+    student_data = adapter.get_student_by_id(db, student_id)
+    if not student_data:
         raise HTTPException(status_code=404, detail="Estudiante no encontrado")
-    return student
+
+    return StudentResponse(**student_data)
 
 
 @router.get("/codigo/{codigo}", response_model=StudentResponse)
@@ -157,10 +168,12 @@ def get_student_by_codigo(codigo: str, db: Session = Depends(get_db)):
     """
     Obtener un estudiante por código
     """
-    student = student_service.get_student_by_codigo(db, codigo)
-    if not student:
+    # ✅ USAR ADAPTER
+    student_data = adapter.get_student_by_codigo(db, codigo)
+    if not student_data:
         raise HTTPException(status_code=404, detail="Estudiante no encontrado")
-    return student
+
+    return StudentResponse(**student_data)
 
 
 @router.put("/{student_id}", response_model=StudentResponse)
@@ -180,8 +193,8 @@ async def update_student(
     temp_file_path = None
 
     try:
-        # Verificar que el estudiante existe
-        student = student_service.get_student(db, student_id)
+        # ✅ VERIFICAR QUE EL ESTUDIANTE EXISTE USANDO ADAPTER
+        student = adapter.get_student_by_id(db, student_id)
         if not student:
             raise HTTPException(status_code=404, detail="Estudiante no encontrado")
 
@@ -192,9 +205,9 @@ async def update_student(
         if apellidos is not None:
             update_data["apellidos"] = apellidos
         if codigo is not None:
-            # Verificar que el nuevo código no exista
-            existing = student_service.get_student_by_codigo(db, codigo)
-            if existing and existing.id != student_id:
+            # ✅ VERIFICAR QUE EL NUEVO CÓDIGO NO EXISTA USANDO ADAPTER
+            existing = adapter.get_student_by_codigo(db, codigo)
+            if existing and existing.get('id') != student_id:
                 raise HTTPException(status_code=400, detail="El código ya existe")
             update_data["codigo"] = codigo
         if correo is not None:
@@ -231,9 +244,13 @@ async def update_student(
 
             logger.info(f"✅ Nueva imagen procesada y subida: {new_image_url}")
 
-        student_update = StudentUpdate(**update_data)
-        updated_student = student_service.update_student(db, student_id, student_update)
-        return updated_student
+        # ✅ ACTUALIZAR USANDO ADAPTER
+        updated_student = adapter.update_student(db, student_id, update_data, image)
+
+        if not updated_student:
+            raise HTTPException(status_code=500, detail="Error al actualizar estudiante")
+
+        return StudentResponse(**updated_student)
 
     except HTTPException:
         raise
@@ -257,16 +274,16 @@ def delete_student(student_id: int, db: Session = Depends(get_db)):
     Eliminar un estudiante
     """
     try:
-        student = student_service.get_student(db, student_id)
+        # ✅ VERIFICAR EXISTENCIA Y ELIMINAR USANDO ADAPTER
+        student = adapter.get_student_by_id(db, student_id)
         if not student:
             raise HTTPException(status_code=404, detail="Estudiante no encontrado")
 
-        # Nota: En Railway + Cloudflare R2, no eliminamos la imagen físicamente
-        # ya que está en R2 y puede ser costoso hacer cleanup frecuente
-        logger.info(f"🗑️ Eliminando estudiante {student_id} (imagen permanece en R2)")
+        logger.info(f"🗑️ Eliminando estudiante {student_id} usando CloudflareAdapter")
 
-        # Eliminar de la base de datos
-        success = student_service.delete_student(db, student_id)
+        # Eliminar usando adapter (maneja tanto D1 como SQLite)
+        success = adapter.delete_student(db, student_id)
+
         if success:
             return {"message": "Estudiante eliminado correctamente"}
         else:
@@ -286,16 +303,18 @@ def get_student_image(student_id: int, db: Session = Depends(get_db)):
     """
     from fastapi.responses import RedirectResponse
 
-    student = student_service.get_student(db, student_id)
+    # ✅ USAR ADAPTER
+    student = adapter.get_student_by_id(db, student_id)
     if not student:
         raise HTTPException(status_code=404, detail="Estudiante no encontrado")
 
-    if not student.imagen_path:
+    imagen_path = student.get("imagen_path")
+    if not imagen_path:
         raise HTTPException(status_code=404, detail="Imagen no encontrada")
 
     # En Railway + Cloudflare R2, redirigir a la URL pública
-    if student.imagen_path.startswith('http'):
-        return RedirectResponse(url=student.imagen_path)
+    if imagen_path.startswith('http'):
+        return RedirectResponse(url=imagen_path)
     else:
         # Fallback para imágenes locales (no debería pasar en producción)
         raise HTTPException(status_code=404, detail="Imagen no accesible")
@@ -328,8 +347,8 @@ async def create_students_batch(
                     })
                     continue
 
-                # Verificar código único
-                existing = student_service.get_student_by_codigo(db, student_data['codigo'])
+                # ✅ VERIFICAR CÓDIGO ÚNICO USANDO ADAPTER
+                existing = adapter.get_student_by_codigo(db, student_data['codigo'])
                 if existing:
                     errors.append({
                         "index": i,
@@ -338,18 +357,18 @@ async def create_students_batch(
                     })
                     continue
 
-                # Crear estudiante sin imagen
-                student_create = StudentCreate(
-                    nombre=student_data['nombre'],
-                    apellidos=student_data['apellidos'],
-                    codigo=student_data['codigo'],
-                    correo=student_data['correo'],
-                    requisitoriado=student_data.get('requisitoriado', False),
-                    imagen_path=None,
-                    face_encoding=None
-                )
+                # ✅ CREAR ESTUDIANTE USANDO ADAPTER
+                student_create_data = {
+                    "nombre": student_data['nombre'],
+                    "apellidos": student_data['apellidos'],
+                    "codigo": student_data['codigo'],
+                    "correo": student_data['correo'],
+                    "requisitoriado": student_data.get('requisitoriado', False),
+                    "imagen_path": None,
+                    "face_encoding": None
+                }
 
-                student = student_service.create_student(db, student_create)
+                student = adapter.create_student(db, student_create_data, None)
                 created_students.append(student)
 
             except Exception as e:
@@ -375,18 +394,20 @@ def get_student_face_encoding(student_id: int, db: Session = Depends(get_db)):
     """
     Obtener el encoding facial de un estudiante (para debugging)
     """
-    student = student_service.get_student(db, student_id)
+    # ✅ USAR ADAPTER
+    student = adapter.get_student_by_id(db, student_id)
     if not student:
         raise HTTPException(status_code=404, detail="Estudiante no encontrado")
 
-    if not student.face_encoding:
+    face_encoding = student.get("face_encoding")
+    if not face_encoding:
         raise HTTPException(status_code=404, detail="Encoding facial no encontrado")
 
     return {
-        "student_id": student.id,
-        "nombre": f"{student.nombre} {student.apellidos}",
-        "codigo": student.codigo,
-        "encoding_length": len(student.face_encoding),
-        "encoding_preview": student.face_encoding[:5],  # Solo primeros 5 valores
-        "has_image": bool(student.imagen_path)
+        "student_id": student.get("id"),
+        "nombre": f"{student.get('nombre', '')} {student.get('apellidos', '')}",
+        "codigo": student.get("codigo"),
+        "encoding_length": len(face_encoding),
+        "encoding_preview": face_encoding[:5],  # Solo primeros 5 valores
+        "has_image": bool(student.get("imagen_path"))
     }
