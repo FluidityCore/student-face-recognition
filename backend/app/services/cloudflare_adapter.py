@@ -59,6 +59,7 @@ class CloudflareAdapter:
 
     def create_student(self, db: Session, student_data: Dict[str, Any], image_file: UploadFile = None) -> Dict[str, Any]:
         """Crear estudiante usando D1 + R2 o SQLite + Local"""
+        logger.warning(f"🟣 create_student called. D1: {self.d1_available}, Local: {not self.d1_available}")
         try:
             # Subir imagen si se proporciona
             image_url = None
@@ -106,6 +107,7 @@ class CloudflareAdapter:
             raise
 
     def get_all_students(self, db: Session) -> List[Dict[str, Any]]:
+        logger.warning(f"🟢 get_all_students called. D1: {self.d1_available}, Local: {not self.d1_available}")
         """Obtener todos los estudiantes"""
         try:
             if self.d1_available:

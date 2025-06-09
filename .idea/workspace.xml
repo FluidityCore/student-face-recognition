@@ -14,13 +14,13 @@
       <change afterPath="$PROJECT_DIR$/mobile/src/screens/SettingsScreen.js" afterDir="false" />
       <change afterPath="$PROJECT_DIR$/mobile/src/screens/StudentsListScreen.js" afterDir="false" />
       <change afterPath="$PROJECT_DIR$/mobile/src/services/ApiService.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/vcs.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/vcs.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/mobile/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/mobile/.gitignore" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/mobile/App.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/mobile/App.js" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/mobile/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/mobile/README.md" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/mobile/android/app/src/main/AndroidManifest.xml" beforeDir="false" afterPath="$PROJECT_DIR$/mobile/android/app/src/main/AndroidManifest.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/mobile/android/app/src/main/java/com/studentfacerecognitionnew/MainActivity.kt" beforeDir="false" afterPath="$PROJECT_DIR$/mobile/android/app/src/main/java/com/studentfacerecognitionnew/MainActivity.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/mobile/android/app/src/main/res/values/styles.xml" beforeDir="false" afterPath="$PROJECT_DIR$/mobile/android/app/src/main/res/values/styles.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/mobile/app.json" beforeDir="false" afterPath="$PROJECT_DIR$/mobile/app.json" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/mobile/package-lock.json" beforeDir="false" afterPath="$PROJECT_DIR$/mobile/package-lock.json" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/mobile/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/mobile/package.json" afterDir="false" />
@@ -102,7 +102,7 @@
       <recent name="C:\Users\bertl\OneDrive\Documentos\Proyectos\student-face-recognition\backend\estudiantes_fotos" />
     </key>
   </component>
-  <component name="RunManager">
+  <component name="RunManager" selected="Python.bulk_upload_students">
     <configuration name="bulk_upload_students" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="student-face-recognition" />
       <option name="ENV_FILES" value="" />
@@ -202,7 +202,7 @@
       <workItem from="1749401076998" duration="11362000" />
       <workItem from="1749413152247" duration="298000" />
       <workItem from="1749413953845" duration="1229000" />
-      <workItem from="1749416272793" duration="1644000" />
+      <workItem from="1749416272793" duration="8090000" />
     </task>
     <servers />
   </component>
