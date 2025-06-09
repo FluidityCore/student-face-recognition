@@ -175,9 +175,6 @@ async def log_requests(request: Request, call_next):
 
 # CONFIGURAR CORS PARA SERVIDOR
 allowed_origins = [
-    "http://localhost:3000",  # React frontend local
-    "http://10.0.2.2:8000",  # Android emulator
-    "http://localhost:8000",  # Local development
     "https://*.onrender.com",  # Cualquier subdominio de Render
     "https://*.vercel.app",  # Cualquier frontend en Vercel
     "https://*.netlify.app",  # Cualquier frontend en Netlify
