@@ -1,4 +1,4 @@
-// mobile/screens/MenuScreen.tsx - VERSIÓN FINAL RESPONSIVA Y MODERNA
+// mobile/screens/MenuScreen.tsx - VERSIÓN CORREGIDA PARA ESTADÍSTICAS
 import React from 'react';
 import {
     View,
@@ -26,14 +26,81 @@ import { responsive, baseStyles, wp, hp, fp } from '../utils/responsive';
 
 const API_BASE = 'https://student-face-recognition-production.up.railway.app';
 
+// Función helper para requests con timeout
+const fetchWithTimeout = async (url: string, timeoutMs: number = 15000) => {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+    try {
+        const response = await fetch(url, {
+            signal: controller.signal,
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+            }
+        });
+        clearTimeout(timeoutId);
+        return response;
+    } catch (error) {
+        clearTimeout(timeoutId);
+        throw error;
+    }
+};
+
+// Servicio API mejorado para estadísticas
 const apiService = {
     healthCheck: async () => {
-        const response = await fetch(`${API_BASE}/health`);
-        return response.json();
+        try {
+            console.log('🏥 Health check...');
+            const response = await fetchWithTimeout(`${API_BASE}/health`, 10000);
+            const data = await response.json();
+            console.log('✅ Health check success:', data);
+            return data;
+        } catch (error) {
+            console.error('❌ Health check failed:', error);
+            throw error;
+        }
     },
-    getStats: async () => {
-        const response = await fetch(`${API_BASE}/api/recognition/stats`);
-        return response.json();
+
+    getStudents: async () => {
+        try {
+            console.log('📋 Obteniendo estudiantes para estadísticas...');
+            const response = await fetchWithTimeout(`${API_BASE}/api/students`, 15000);
+
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+            }
+
+            const students = await response.json();
+            console.log('✅ Estudiantes obtenidos:', students?.length || 0);
+            return Array.isArray(students) ? students : [];
+        } catch (error) {
+            console.error('❌ Error obteniendo estudiantes:', error);
+            throw error;
+        }
+    },
+
+    getRecognitionStats: async () => {
+        try {
+            console.log('📊 Obteniendo estadísticas de reconocimiento...');
+            const response = await fetchWithTimeout(`${API_BASE}/api/recognition/stats`, 15000);
+
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+            }
+
+            const stats = await response.json();
+            console.log('✅ Stats de reconocimiento obtenidas:', stats);
+            return stats;
+        } catch (error) {
+            console.error('❌ Error obteniendo stats de reconocimiento:', error);
+            // Retornar stats por defecto en caso de error
+            return {
+                total_recognitions: 0,
+                successful_recognitions: 0,
+                success_rate: 0
+            };
+        }
     }
 };
 
@@ -52,18 +119,49 @@ export default function MenuScreen() {
         }).start();
     }, []);
 
-    // Verificar conexión con API
+    // Query para health check
     const { data: health, isLoading: healthLoading } = useQuery({
         queryKey: ['health'],
         queryFn: apiService.healthCheck,
         retry: 2,
+        staleTime: 30000, // 30 segundos
     });
 
-    const { data: stats, isLoading: statsLoading } = useQuery({
-        queryKey: ['stats'],
-        queryFn: apiService.getStats,
-        retry: 1,
+    // Query para estudiantes (para contar)
+    const { data: students = [], isLoading: studentsLoading } = useQuery({
+        queryKey: ['students-count'],
+        queryFn: apiService.getStudents,
+        retry: 2,
+        staleTime: 60000, // 1 minuto
     });
+
+    // Query para estadísticas de reconocimiento
+    const { data: recognitionStats, isLoading: statsLoading } = useQuery({
+        queryKey: ['recognition-stats'],
+        queryFn: apiService.getRecognitionStats,
+        retry: 1,
+        staleTime: 60000, // 1 minuto
+    });
+
+    // Calcular estadísticas combinadas
+    const combinedStats = React.useMemo(() => {
+        const totalStudents = Array.isArray(students) ? students.length : 0;
+        const studentsWithPhoto = Array.isArray(students)
+            ? students.filter(s => s?.imagen_path).length
+            : 0;
+        const requisitoriados = Array.isArray(students)
+            ? students.filter(s => s?.requisitoriado).length
+            : 0;
+
+        return {
+            total_students: totalStudents,
+            students_with_photo: studentsWithPhoto,
+            requisitoriados: requisitoriados,
+            successful_recognitions: recognitionStats?.successful_recognitions || 0,
+            success_rate: recognitionStats?.success_rate || 0,
+            total_recognitions: recognitionStats?.total_recognitions || 0
+        };
+    }, [students, recognitionStats]);
 
     const menuOptions = [
         {
@@ -161,9 +259,15 @@ export default function MenuScreen() {
                                 </Text>
                             </View>
 
-                            {stats && !statsLoading && (
+                            {!studentsLoading && combinedStats.total_students > 0 && (
                                 <Text style={[styles.statsText, { color: theme.colors.textSecondary }]}>
-                                    📊 {stats.total_students || 0} estudiantes registrados
+                                    📊 {combinedStats.total_students} estudiantes registrados
+                                </Text>
+                            )}
+
+                            {studentsLoading && (
+                                <Text style={[styles.statsText, { color: theme.colors.textSecondary }]}>
+                                    📊 Cargando estadísticas...
                                 </Text>
                             )}
                         </Card.Content>
@@ -174,37 +278,45 @@ export default function MenuScreen() {
     );
 
     const renderQuickStats = () => {
-        if (!stats || statsLoading) return null;
+        // No mostrar si está cargando o no hay datos
+        if (studentsLoading || combinedStats.total_students === 0) {
+            return null;
+        }
 
         return (
-            <Animated.View style={[{ opacity: fadeAnim, transform: [{ translateY: fadeAnim.interpolate({
+            <Animated.View style={[{
+                opacity: fadeAnim,
+                transform: [{
+                    translateY: fadeAnim.interpolate({
                         inputRange: [0, 1],
                         outputRange: [20, 0]
-                    }) }] }]}>
+                    })
+                }]
+            }]}>
                 <Card style={[styles.quickStatsCard, { backgroundColor: theme.colors.surface }]}>
                     <Card.Content>
                         <Text style={[styles.quickStatsTitle, { color: theme.colors.text }]}>
-                            📈 Estadísticas Rápidas
+                            📈 Estadísticas del Sistema
                         </Text>
 
                         <View style={styles.quickStats}>
                             <View style={styles.quickStatItem}>
-                                <Text style={[styles.quickStatNumber, { color: theme.colors.success }]}>
-                                    {stats.successful_recognitions || 0}
+                                <Text style={[styles.quickStatNumber, { color: theme.colors.primary }]}>
+                                    {combinedStats.total_students}
                                 </Text>
                                 <Text style={[styles.quickStatLabel, { color: theme.colors.textSecondary }]}>
-                                    Reconocimientos Exitosos
+                                    Total Estudiantes
                                 </Text>
                             </View>
 
                             <View style={[styles.statDivider, { backgroundColor: theme.colors.border }]} />
 
                             <View style={styles.quickStatItem}>
-                                <Text style={[styles.quickStatNumber, { color: theme.colors.info }]}>
-                                    {stats.success_rate || 0}%
+                                <Text style={[styles.quickStatNumber, { color: theme.colors.success }]}>
+                                    {combinedStats.students_with_photo}
                                 </Text>
                                 <Text style={[styles.quickStatLabel, { color: theme.colors.textSecondary }]}>
-                                    Tasa de Éxito
+                                    Con Foto
                                 </Text>
                             </View>
 
@@ -212,13 +324,49 @@ export default function MenuScreen() {
 
                             <View style={styles.quickStatItem}>
                                 <Text style={[styles.quickStatNumber, { color: theme.colors.warning }]}>
-                                    {stats.total_students || 0}
+                                    {combinedStats.requisitoriados}
                                 </Text>
                                 <Text style={[styles.quickStatLabel, { color: theme.colors.textSecondary }]}>
-                                    Total Estudiantes
+                                    Requisitoriados
                                 </Text>
                             </View>
                         </View>
+
+                        {/* Segunda fila de estadísticas */}
+                        {combinedStats.total_recognitions > 0 && (
+                            <View style={[styles.quickStats, { marginTop: responsive.spacing.md }]}>
+                                <View style={styles.quickStatItem}>
+                                    <Text style={[styles.quickStatNumber, { color: theme.colors.info }]}>
+                                        {combinedStats.successful_recognitions}
+                                    </Text>
+                                    <Text style={[styles.quickStatLabel, { color: theme.colors.textSecondary }]}>
+                                        Reconocimientos
+                                    </Text>
+                                </View>
+
+                                <View style={[styles.statDivider, { backgroundColor: theme.colors.border }]} />
+
+                                <View style={styles.quickStatItem}>
+                                    <Text style={[styles.quickStatNumber, { color: theme.colors.success }]}>
+                                        {combinedStats.success_rate}%
+                                    </Text>
+                                    <Text style={[styles.quickStatLabel, { color: theme.colors.textSecondary }]}>
+                                        Tasa de Éxito
+                                    </Text>
+                                </View>
+
+                                <View style={[styles.statDivider, { backgroundColor: theme.colors.border }]} />
+
+                                <View style={styles.quickStatItem}>
+                                    <Text style={[styles.quickStatNumber, { color: theme.colors.primary }]}>
+                                        {combinedStats.total_recognitions}
+                                    </Text>
+                                    <Text style={[styles.quickStatLabel, { color: theme.colors.textSecondary }]}>
+                                        Total Intentos
+                                    </Text>
+                                </View>
+                            </View>
+                        )}
                     </Card.Content>
                 </Card>
             </Animated.View>

@@ -1,0 +1,57 @@
+# 🔁 Dependencias (se reinstalan automáticamente)
+node_modules/
+package-lock.json
+yarn.lock
+.pnpm-debug.log
+
+# 🧪 Archivos y carpetas de testeo
+__tests__/
+__mocks__/
+coverage/
+*.spec.*
+*.test.*
+
+# 🧹 Caché y archivos temporales
+.expo/
+.expo-shared/
+.cache/
+metro-cache/
+tmp/
+*.log
+
+# 🛠️ Archivos de configuración de editores
+.vscode/
+.idea/
+
+# 🖼️ Archivos grandes innecesarios (diseño, mockups, etc.)
+*.psd
+*.ai
+*.sketch
+*.xcf
+assets/raw/
+designs/
+mockups/
+
+# 📄 Documentación y archivos de texto
+*.md
+*.pdf
+README*
+LICENSE
+
+# ⚙️ Archivos de sistema
+.DS_Store
+Thumbs.db
+
+# 💥 Carpetas de build (si alguna existe en local)
+android/app/build/
+ios/build/
+build/
+dist/
+
+# 🌐 Web build output (si llegás a usarlo)
+web-build/
+
+# ⚠️ Variables de entorno locales que no uses en producción
+.env.local
+.env.development
+.env.test
