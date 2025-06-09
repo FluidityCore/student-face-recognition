@@ -5,26 +5,79 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="1295e4c4-eeba-420e-98f1-cf5c132363bd" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/mobile/android/app/src/main/res/xml/network_security_config.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mobile/src/navigation/AppNavigator.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mobile/src/screens/CreateStudentScreen.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mobile/src/screens/EditStudentScreen.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mobile/src/screens/MenuScreen.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mobile/src/screens/RecognitionScreen.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mobile/src/screens/SettingsScreen.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mobile/src/screens/StudentsListScreen.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mobile/src/services/ApiService.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mobile/context/ThemeContext.tsx" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mobile/screens/AddStudentScreen.tsx" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mobile/screens/EditStudentScreen.tsx" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mobile/screens/MenuScreen.tsx" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mobile/screens/RecognizeScreen.tsx" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mobile/screens/StudentsListScreen.tsx" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mobile/types/navigation.ts" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mobile/utils/responsive.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/vcs.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/vcs.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/app/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend/app/main.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/mobile/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/mobile/.gitignore" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/mobile/App.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/mobile/App.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/mobile/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/mobile/README.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/mobile/android/app/src/main/AndroidManifest.xml" beforeDir="false" afterPath="$PROJECT_DIR$/mobile/android/app/src/main/AndroidManifest.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/mobile/android/app/src/main/java/com/studentfacerecognitionnew/MainActivity.kt" beforeDir="false" afterPath="$PROJECT_DIR$/mobile/android/app/src/main/java/com/studentfacerecognitionnew/MainActivity.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/mobile/android/app/src/main/res/values/styles.xml" beforeDir="false" afterPath="$PROJECT_DIR$/mobile/android/app/src/main/res/values/styles.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/mobile/app.json" beforeDir="false" afterPath="$PROJECT_DIR$/mobile/app.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/mobile/package-lock.json" beforeDir="false" afterPath="$PROJECT_DIR$/mobile/package-lock.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/mobile/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/mobile/package.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/mobile/.bundle/config" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/mobile/.eslintrc.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/mobile/.gitignore" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/mobile/.prettierrc.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/mobile/.watchmanconfig" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/mobile/App.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/mobile/Gemfile" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/mobile/README.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/mobile/__tests__/App.test.tsx" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/mobile/android/app/build.gradle" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/mobile/android/app/debug.keystore" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/mobile/android/app/proguard-rules.pro" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/mobile/android/app/src/debug/AndroidManifest.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/mobile/android/app/src/main/AndroidManifest.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/mobile/android/app/src/main/java/com/studentfacerecognitionnew/MainActivity.kt" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/mobile/android/app/src/main/java/com/studentfacerecognitionnew/MainApplication.kt" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/mobile/android/app/src/main/res/drawable/rn_edit_text_material.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/mobile/android/app/src/main/res/mipmap-hdpi/ic_launcher.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/mobile/android/app/src/main/res/mipmap-hdpi/ic_launcher_round.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/mobile/android/app/src/main/res/mipmap-mdpi/ic_launcher.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/mobile/android/app/src/main/res/mipmap-mdpi/ic_launcher_round.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/mobile/android/app/src/main/res/mipmap-xhdpi/ic_launcher.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/mobile/android/app/src/main/res/mipmap-xhdpi/ic_launcher_round.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/mobile/android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/mobile/android/app/src/main/res/mipmap-xxhdpi/ic_launcher_round.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/mobile/android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/mobile/android/app/src/main/res/mipmap-xxxhdpi/ic_launcher_round.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/mobile/android/app/src/main/res/values/strings.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/mobile/android/app/src/main/res/values/styles.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/mobile/android/app/src/main/res/xml/network_security_config.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/mobile/android/build.gradle" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/mobile/android/gradle.properties" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/mobile/android/gradle/wrapper/gradle-wrapper.jar" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/mobile/android/gradle/wrapper/gradle-wrapper.properties" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/mobile/android/gradlew" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/mobile/android/gradlew.bat" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/mobile/android/settings.gradle" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/mobile/app.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/mobile/babel.config.js" beforeDir="false" afterPath="$PROJECT_DIR$/mobile/babel.config.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/mobile/index.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/mobile/ios/.xcode.env" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/mobile/ios/Podfile" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/mobile/ios/StudentFaceRecognitionNew.xcodeproj/project.pbxproj" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/mobile/ios/StudentFaceRecognitionNew.xcodeproj/xcshareddata/xcschemes/StudentFaceRecognitionNew.xcscheme" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/mobile/ios/StudentFaceRecognitionNew/AppDelegate.swift" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/mobile/ios/StudentFaceRecognitionNew/Images.xcassets/AppIcon.appiconset/Contents.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/mobile/ios/StudentFaceRecognitionNew/Images.xcassets/Contents.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/mobile/ios/StudentFaceRecognitionNew/Info.plist" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/mobile/ios/StudentFaceRecognitionNew/LaunchScreen.storyboard" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/mobile/ios/StudentFaceRecognitionNew/PrivacyInfo.xcprivacy" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/mobile/jest.config.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/mobile/metro.config.js" beforeDir="false" afterPath="$PROJECT_DIR$/mobile/metro.config.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/mobile/package-lock.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/mobile/package.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/mobile/src/navigation/AppNavigator.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/mobile/src/screens/CreateStudentScreen.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/mobile/src/screens/EditStudentScreen.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/mobile/src/screens/MenuScreen.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/mobile/src/screens/RecognitionScreen.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/mobile/src/screens/SettingsScreen.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/mobile/src/screens/StudentsListScreen.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/mobile/src/services/apiService.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/mobile/tsconfig.json" beforeDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -37,9 +90,9 @@
   <component name="FileTemplateManagerImpl">
     <option name="RECENT_TEMPLATES">
       <list>
-        <option value="TypeScript File" />
-        <option value="JavaScript File" />
         <option value="Python Script" />
+        <option value="JavaScript File" />
+        <option value="TypeScript File" />
       </list>
     </option>
   </component>
@@ -77,6 +130,7 @@
     &quot;Python.setup_database.executor&quot;: &quot;Run&quot;,
     &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
     &quot;RunOnceActivity.cidr.known.project.marker&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
     &quot;RunOnceActivity.readMode.enableVisualFormatting&quot;: &quot;true&quot;,
     &quot;SHARE_PROJECT_CONFIGURATION_FILES&quot;: &quot;true&quot;,
     &quot;cf.first.check.clang-format&quot;: &quot;false&quot;,
@@ -100,6 +154,7 @@
       <recent name="C:\Proyectos\student-face-recognition\backend" />
     </key>
     <key name="MoveFile.RECENT_KEYS">
+      <recent name="C:\Proyectos\student-face-recognition\mobile\screens" />
       <recent name="C:\Users\bertl\OneDrive\Documentos\Proyectos\student-face-recognition\backend\estudiantes_fotos" />
     </key>
   </component>
@@ -177,8 +232,7 @@
   <component name="SharedIndexes">
     <attachedChunks>
       <set>
-        <option value="bundled-js-predefined-d6986cc7102b-f27c65a3e318-JavaScript-PY-251.23774.444" />
-        <option value="bundled-python-sdk-890ed5b35930-d9c5bdb153f4-com.jetbrains.pycharm.pro.sharedIndexes.bundled-PY-251.23774.444" />
+        <option value="bundled-js-predefined-1d06a55b98c1-0b3e54e931b4-JavaScript-WS-241.17890.13" />
       </set>
     </attachedChunks>
   </component>
@@ -204,6 +258,7 @@
       <workItem from="1749413152247" duration="298000" />
       <workItem from="1749413953845" duration="1229000" />
       <workItem from="1749416272793" duration="8826000" />
+      <workItem from="1749445896898" duration="11532000" />
     </task>
     <servers />
   </component>
