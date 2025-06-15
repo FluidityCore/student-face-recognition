@@ -13,7 +13,7 @@ load_dotenv()
 logger = logging.getLogger(__name__)
 
 
-# CONFIGURACIÓN INTELIGENTE: SQLite O CLOUDFLARE D1
+# CONFIGURACIÓN INTELIGENTE: D1 > MYSQL (SIN SQLITE)
 def get_database_configuration():
     """Determinar configuración de base de datos según variables de entorno"""
 
@@ -35,12 +35,23 @@ def get_database_configuration():
             "use_d1": True
         }
     else:
-        # Fallback a SQLite
-        sqlite_url = os.getenv("DATABASE_URL", "sqlite:///./student_recognition.db")
-        logger.info(f"💾 Configurando SQLite como base de datos: {sqlite_url}")
+        # Fallback a MySQL (NO SQLite)
+        mysql_url = os.getenv("DATABASE_URL")
+
+        # Si no hay DATABASE_URL, construir desde variables individuales
+        if not mysql_url or mysql_url == "cloudflare://d1":
+            mysql_host = os.getenv("MYSQL_HOST", "localhost")
+            mysql_port = os.getenv("MYSQL_PORT", "3307")
+            mysql_user = os.getenv("MYSQL_USER", "root")
+            mysql_password = os.getenv("MYSQL_PASSWORD", "root")
+            mysql_database = os.getenv("MYSQL_DATABASE", "face_recognition_db")
+
+            mysql_url = f"mysql+pymysql://{mysql_user}:{mysql_password}@{mysql_host}:{mysql_port}/{mysql_database}?charset=utf8mb4"
+
+        logger.info(f"💾 Configurando MySQL como base de datos: {mysql_host}:{mysql_port}/{mysql_database}")
         return {
-            "type": "sqlite",
-            "url": sqlite_url,
+            "type": "mysql",
+            "url": mysql_url,
             "use_d1": False
         }
 
@@ -55,27 +66,24 @@ if USE_CLOUDFLARE_D1:
     # Para D1, usamos un engine dummy para SQLAlchemy (solo para modelos)
     # Las operaciones reales las maneja CloudflareD1Service
     engine = create_engine(
-        "sqlite:///:memory:",  # Engine temporal para SQLAlchemy
+        "mysql+pymysql://dummy:dummy@localhost:3307/dummy",  # Engine temporal para SQLAlchemy
         echo=False,
-        connect_args={"check_same_thread": False}
+        pool_pre_ping=True
     )
     logger.info("☁️ Engine configurado para Cloudflare D1")
 else:
-    # SQLite tradicional
-    if "sqlite" in DATABASE_URL:
-        engine = create_engine(
-            DATABASE_URL,
-            echo=False,
-            connect_args={"check_same_thread": False}
-        )
-    else:
-        engine = create_engine(
-            DATABASE_URL,
-            echo=False,
-            pool_pre_ping=True,
-            pool_recycle=300
-        )
-    logger.info(f"💾 Engine configurado para SQLite: {DATABASE_URL}")
+    # MySQL tradicional
+    engine = create_engine(
+        DATABASE_URL,
+        echo=False,
+        pool_pre_ping=True,
+        pool_recycle=300,
+        connect_args={
+            "charset": "utf8mb4",
+            "use_unicode": True
+        }
+    )
+    logger.info(f"💾 Engine configurado para MySQL: {DATABASE_URL.split('@')[1] if '@' in DATABASE_URL else 'MySQL'}")
 
 # Crear SessionLocal
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
@@ -84,9 +92,9 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
 
-# Modelo de Estudiante
+# Modelo de Estudiante (Compatible MySQL/D1)
 class Student(Base):
-    __tablename__ = "students"
+    __tablename__ = "estudiantes"
 
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     nombre = Column(String(100), nullable=False, index=True)
@@ -97,7 +105,7 @@ class Student(Base):
 
     # Datos de la imagen y reconocimiento facial
     imagen_path = Column(String(500), nullable=True)
-    face_encoding = Column(JSON, nullable=True)  # Compatible con SQLite y D1
+    face_encoding = Column(JSON, nullable=True)  # Compatible con MySQL JSON y D1
 
     # Metadatos
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
@@ -132,7 +140,7 @@ class RecognitionLogModel(Base):
         return f"<RecognitionLog(id={self.id}, {status}, similarity={self.similarity:.2f})>"
 
 
-# Modelo de Configuración del Sistema
+# Modelo de Configuración del Sistema (Solo para MySQL)
 class SystemConfig(Base):
     __tablename__ = "system_config"
 
@@ -187,13 +195,12 @@ def create_tables():
                 logger.error("❌ CloudflareD1Service no disponible")
                 raise Exception("D1 Service no disponible")
         else:
-            # SQLite tradicional
-            logger.info("💾 Creando tablas en SQLite...")
+            # MySQL tradicional
+            logger.info("💾 Creando tablas en MySQL...")
             Base.metadata.create_all(bind=engine)
-            logger.info("✅ Tablas SQLite creadas exitosamente")
+            logger.info("✅ Tablas MySQL creadas exitosamente")
 
-        # Insertar configuraciones por defecto (solo para SQLite)
-        if not USE_CLOUDFLARE_D1:
+            # Insertar configuraciones por defecto (solo para MySQL)
             _insert_default_configs()
 
     except Exception as e:
@@ -202,7 +209,7 @@ def create_tables():
 
 
 def _insert_default_configs():
-    """Insertar configuraciones por defecto (solo SQLite)"""
+    """Insertar configuraciones por defecto (solo MySQL)"""
     try:
         db = SessionLocal()
         try:
@@ -259,12 +266,19 @@ def test_database_connection():
                 logger.error("❌ CloudflareD1Service no disponible")
                 return False
         else:
-            # Probar conexión SQLite
-            db = SessionLocal()
-            db.execute(text("SELECT 1"))
-            db.close()
-            logger.info("✅ Conexión a SQLite exitosa")
-            return True
+            # Probar conexión MySQL
+            try:
+                from ..services.mysql_service import MySQLService
+                mysql_service = MySQLService()
+                if mysql_service.enabled and mysql_service.test_connection():
+                    logger.info("✅ Conexión a MySQL exitosa")
+                    return True
+                else:
+                    logger.error("❌ Error de conexión a MySQL")
+                    return False
+            except ImportError:
+                logger.error("❌ MySQLService no disponible")
+                return False
 
     except Exception as e:
         logger.error(f"❌ Error de conexión a la base de datos: {e}")
@@ -283,51 +297,22 @@ def get_database_stats():
                 from ..services.cloudflare_d1 import CloudflareD1Service
                 d1_service = CloudflareD1Service()
                 if d1_service.enabled:
-                    # Obtener estadísticas desde D1
-                    students = d1_service.get_all_students()
-                    recognition_stats = d1_service.get_recognition_stats()
-
-                    total_students = len(students)
-                    requisitoriados = sum(1 for s in students if s.get('requisitoriado', False))
-
-                    return {
-                        "total_students": total_students,
-                        "requisitoriados": requisitoriados,
-                        "total_recognitions": recognition_stats.get("total_recognitions", 0),
-                        "successful_recognitions": recognition_stats.get("successful_recognitions", 0),
-                        "success_rate": recognition_stats.get("success_rate", 0)
-                    }
+                    return d1_service.get_database_stats()
                 else:
                     return {"error": "D1 no configurado"}
             except ImportError:
                 return {"error": "D1 Service no disponible"}
         else:
-            # SQLite tradicional
-            db = SessionLocal()
-
-            total_students = db.query(Student).filter(Student.active == True).count()
-            requisitoriados = db.query(Student).filter(
-                Student.active == True,
-                Student.requisitoriado == True
-            ).count()
-
-            total_recognitions = db.query(RecognitionLogModel).count()
-            successful_recognitions = db.query(RecognitionLogModel).filter(
-                RecognitionLogModel.found == True
-            ).count()
-
-            db.close()
-
-            return {
-                "total_students": total_students,
-                "requisitoriados": requisitoriados,
-                "total_recognitions": total_recognitions,
-                "successful_recognitions": successful_recognitions,
-                "success_rate": round(
-                    (successful_recognitions / total_recognitions * 100) if total_recognitions > 0 else 0,
-                    2
-                )
-            }
+            # MySQL tradicional
+            try:
+                from ..services.mysql_service import MySQLService
+                mysql_service = MySQLService()
+                if mysql_service.enabled:
+                    return mysql_service.get_database_stats()
+                else:
+                    return {"error": "MySQL no configurado"}
+            except ImportError:
+                return {"error": "MySQL Service no disponible"}
 
     except Exception as e:
         logger.error(f"❌ Error al obtener estadísticas: {e}")
@@ -355,14 +340,18 @@ def get_database_info():
                 "storage_type": "Edge Database"
             }
         else:
-            db_url = str(engine.url)
+            # MySQL
+            mysql_host = os.getenv("MYSQL_HOST", "localhost")
+            mysql_port = os.getenv("MYSQL_PORT", "3307")
+            mysql_database = os.getenv("MYSQL_DATABASE", "face_recognition_db")
+
             return {
-                "database_type": "SQLite",
-                "database_url": db_url.split("///")[-1] if "sqlite" in db_url else "Remote DB",
+                "database_type": "MySQL",
+                "database_url": f"{mysql_host}:{mysql_port}/{mysql_database}",
                 "connection_status": "Connected" if test_database_connection() else "Connection Failed",
                 "ready_for_production": False,
                 "global_distribution": False,
-                "storage_type": "Local File"
+                "storage_type": "Local MySQL Server"
             }
 
     except Exception as e:
@@ -376,13 +365,19 @@ def get_database_info():
 # Función para obtener tipo de base de datos actual
 def get_database_type():
     """Retornar el tipo de base de datos en uso"""
-    return "Cloudflare D1" if USE_CLOUDFLARE_D1 else "SQLite"
+    return "Cloudflare D1" if USE_CLOUDFLARE_D1 else "MySQL"
 
 
 # Función para verificar si D1 está habilitado
 def is_d1_enabled():
     """Verificar si Cloudflare D1 está habilitado"""
     return USE_CLOUDFLARE_D1
+
+
+# Función para verificar si MySQL está habilitado
+def is_mysql_enabled():
+    """Verificar si MySQL está habilitado"""
+    return not USE_CLOUDFLARE_D1
 
 
 if __name__ == "__main__":
@@ -406,6 +401,7 @@ if __name__ == "__main__":
         print(f"📋 Configuración actual:")
         print(f"   - Tipo: {get_database_type()}")
         print(f"   - D1 Habilitado: {'✅' if is_d1_enabled() else '❌'}")
+        print(f"   - MySQL Habilitado: {'✅' if is_mysql_enabled() else '❌'}")
         print(f"   - Estado: Funcionando")
     else:
         print("❌ Error de conexión")

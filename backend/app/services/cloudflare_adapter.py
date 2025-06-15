@@ -6,14 +6,14 @@ from fastapi import UploadFile
 
 from .cloudflare_d1 import CloudflareD1Service
 from .cloudflare_r2 import CloudflareR2Service
+from .mysql_service import MySQLService
 from ..models.database import Student, RecognitionLogModel, SessionLocal
-from ..services.database_service import StudentService, LogService
 
 logger = logging.getLogger(__name__)
 
 
 class CloudflareAdapter:
-    """Adaptador unificado para usar Cloudflare D1 + R2 o SQLite + Local"""
+    """Adaptador unificado para usar Cloudflare D1 + R2 o MySQL + Local"""
 
     def __init__(self):
         """Inicializar adaptador"""
@@ -24,20 +24,23 @@ class CloudflareAdapter:
         self.d1_service = CloudflareD1Service() if self.use_d1 else None
         self.r2_service = CloudflareR2Service() if self.use_r2 else None
 
-        # Servicios de fallback (SQLite + Local)
-        self.student_service = StudentService()
-        self.log_service = LogService()
+        # CAMBIO: MySQL service en lugar de servicios SQLite genéricos
+        self.mysql_service = MySQLService() if not self.use_d1 else None
 
         # Verificar disponibilidad
         self.d1_available = self.d1_service and self.d1_service.enabled
         self.r2_available = self.r2_service and self.r2_service.is_available()
+        self.mysql_available = self.mysql_service and self.mysql_service.enabled
 
         # Log de configuración
         logger.info(f"🔧 Cloudflare D1: {'✅ Habilitado' if self.d1_available else '❌ Deshabilitado'}")
         logger.info(f"🔧 Cloudflare R2: {'✅ Habilitado' if self.r2_available else '❌ Deshabilitado'}")
+        logger.info(f"🔧 MySQL Local: {'✅ Habilitado' if self.mysql_available else '❌ Deshabilitado'}")
 
         if self.d1_available:
             self._initialize_d1()
+        elif self.mysql_available:
+            logger.info("💾 Usando MySQL como base de datos principal")
 
     def _initialize_d1(self) -> bool:
         """Inicializar base de datos D1"""
@@ -57,9 +60,10 @@ class CloudflareAdapter:
     # MÉTODOS PARA ESTUDIANTES
     # ==========================================
 
-    def create_student(self, db: Session, student_data: Dict[str, Any], image_file: UploadFile = None) -> Dict[str, Any]:
-        """Crear estudiante usando D1 + R2 o SQLite + Local"""
-        logger.warning(f"🟣 create_student called. D1: {self.d1_available}, Local: {not self.d1_available}")
+    async def create_student(self, db: Session, student_data: Dict[str, Any], image_file: UploadFile = None) -> Dict[
+        str, Any]:
+        """Crear estudiante usando D1 + R2 o MySQL + Local"""
+        logger.info(f"🟣 create_student called. D1: {self.d1_available}, MySQL: {self.mysql_available}")
         try:
             # Subir imagen si se proporciona
             image_url = None
@@ -71,7 +75,7 @@ class CloudflareAdapter:
                     # Guardar localmente
                     from ..utils.image_processing import ImageProcessor
                     image_processor = ImageProcessor()
-                    image_url = image_processor.save_image(image_file, "reference")
+                    image_url = await image_processor.save_image(image_file, "reference")
 
                 student_data["imagen_path"] = image_url
 
@@ -81,17 +85,23 @@ class CloudflareAdapter:
                 student_id = self.d1_service.create_student(student_data)
                 student = self.d1_service.get_student_by_id(student_id)
 
-                # Verificar que student no sea None
                 if student is None:
                     raise Exception(f"No se pudo recuperar el estudiante creado con ID {student_id}")
 
                 return self._format_student_response(student)
+
+            elif self.mysql_available:
+                # Usar MySQL
+                student_id = self.mysql_service.create_student(student_data)
+                student = self.mysql_service.get_student_by_id(student_id)
+
+                if student is None:
+                    raise Exception(f"No se pudo recuperar el estudiante creado con ID {student_id}")
+
+                return self._format_student_response(student)
+
             else:
-                # Usar SQLite local
-                from ..models.schemas import StudentCreate
-                student_create = StudentCreate(**student_data)
-                student = self.student_service.create_student(db, student_create)
-                return self._format_student_response(student.__dict__)
+                raise Exception("No hay servicio de base de datos disponible")
 
         except Exception as e:
             logger.error(f"❌ Error creando estudiante: {e}")
@@ -107,28 +117,18 @@ class CloudflareAdapter:
             raise
 
     def get_all_students(self, db: Session) -> List[Dict[str, Any]]:
-        logger.warning(f"🟢 get_all_students called. D1: {self.d1_available}, Local: {not self.d1_available}")
         """Obtener todos los estudiantes"""
+        logger.info(f"🟢 get_all_students called. D1: {self.d1_available}, MySQL: {self.mysql_available}")
+
         try:
             if self.d1_available:
                 logger.info("🔍 Obteniendo estudiantes desde Cloudflare D1...")
                 students_raw = self.d1_service.get_all_students()
                 logger.info(f"📊 D1 raw response: {len(students_raw)} estudiantes")
 
-                # Verificar que tenemos datos
                 if not students_raw:
-                    logger.warning("⚠️ D1 devolvió array vacío, verificando consulta directa...")
+                    logger.warning("⚠️ D1 devolvió array vacío")
 
-                    # Intentar consulta directa
-                    try:
-                        result = self.d1_service.execute_query("SELECT * FROM estudiantes WHERE active = 1")
-                        students_raw = result.get("results", [])
-                        logger.info(f"📊 Consulta directa D1: {len(students_raw)} estudiantes")
-                    except Exception as e:
-                        logger.error(f"❌ Error en consulta directa D1: {e}")
-                        students_raw = []
-
-                # Formatear respuestas
                 students = []
                 for student_data in students_raw:
                     try:
@@ -139,11 +139,30 @@ class CloudflareAdapter:
                         logger.error(f"❌ Error formateando estudiante {student_data}: {e}")
                         continue
 
-                logger.info(f"✅ Estudiantes formateados exitosamente: {len(students)}")
+                logger.info(f"✅ Estudiantes D1 formateados: {len(students)}")
                 return students
+
+            elif self.mysql_available:
+                logger.info("🔍 Obteniendo estudiantes desde MySQL...")
+                students_raw = self.mysql_service.get_all_students()
+                logger.info(f"📊 MySQL raw response: {len(students_raw)} estudiantes")
+
+                students = []
+                for student_data in students_raw:
+                    try:
+                        formatted = self._format_student_response(student_data)
+                        if formatted:
+                            students.append(formatted)
+                    except Exception as e:
+                        logger.error(f"❌ Error formateando estudiante {student_data}: {e}")
+                        continue
+
+                logger.info(f"✅ Estudiantes MySQL formateados: {len(students)}")
+                return students
+
             else:
-                students = self.student_service.get_all_students(db)
-                return [self._format_student_response(s.__dict__) for s in students]
+                logger.error("❌ No hay servicio de base de datos disponible")
+                return []
 
         except Exception as e:
             logger.error(f"❌ Error obteniendo estudiantes: {e}")
@@ -154,18 +173,21 @@ class CloudflareAdapter:
         try:
             if self.d1_available:
                 student = self.d1_service.get_student_by_id(student_id)
-
-                # Verificar None antes de formatear
                 if student is None:
                     logger.warning(f"⚠️ Estudiante {student_id} no encontrado en D1")
                     return None
-
                 return self._format_student_response(student)
-            else:
-                student = self.student_service.get_student(db, student_id)
+
+            elif self.mysql_available:
+                student = self.mysql_service.get_student_by_id(student_id)
                 if student is None:
+                    logger.warning(f"⚠️ Estudiante {student_id} no encontrado en MySQL")
                     return None
-                return self._format_student_response(student.__dict__)
+                return self._format_student_response(student)
+
+            else:
+                logger.error("❌ No hay servicio de base de datos disponible")
+                return None
 
         except Exception as e:
             logger.error(f"❌ Error obteniendo estudiante {student_id}: {e}")
@@ -176,25 +198,28 @@ class CloudflareAdapter:
         try:
             if self.d1_available:
                 student = self.d1_service.get_student_by_codigo(codigo)
-
-                # Verificar None antes de formatear
                 if student is None:
                     logger.warning(f"⚠️ Estudiante con código {codigo} no encontrado en D1")
                     return None
-
                 return self._format_student_response(student)
-            else:
-                student = self.student_service.get_student_by_codigo(db, codigo)
+
+            elif self.mysql_available:
+                student = self.mysql_service.get_student_by_codigo(codigo)
                 if student is None:
+                    logger.warning(f"⚠️ Estudiante con código {codigo} no encontrado en MySQL")
                     return None
-                return self._format_student_response(student.__dict__)
+                return self._format_student_response(student)
+
+            else:
+                logger.error("❌ No hay servicio de base de datos disponible")
+                return None
 
         except Exception as e:
             logger.error(f"❌ Error obteniendo estudiante por código {codigo}: {e}")
             return None
 
-    def update_student(self, db: Session, student_id: int, update_data: Dict[str, Any],
-                       image_file: UploadFile = None) -> Optional[Dict[str, Any]]:
+    async def update_student(self, db: Session, student_id: int, update_data: Dict[str, Any],
+                             image_file: UploadFile = None) -> Optional[Dict[str, Any]]:
         """Actualizar estudiante"""
         try:
             # Obtener estudiante actual
@@ -217,11 +242,11 @@ class CloudflareAdapter:
 
                 # Subir nueva imagen
                 if self.r2_available:
-                    new_image = self.r2_service.upload_image(image_file, "students")
+                    new_image = await self.r2_service.upload_image(image_file, "students")
                 else:
                     from ..utils.image_processing import ImageProcessor
                     image_processor = ImageProcessor()
-                    new_image = image_processor.save_image(image_file, "reference")
+                    new_image = await image_processor.save_image(image_file, "reference")
 
                 update_data["imagen_path"] = new_image
 
@@ -230,21 +255,25 @@ class CloudflareAdapter:
                 success = self.d1_service.update_student(student_id, update_data)
                 if success:
                     student = self.d1_service.get_student_by_id(student_id)
-
-                    # Verificar None antes de formatear
                     if student is None:
                         logger.error(f"❌ No se pudo recuperar estudiante actualizado {student_id}")
                         return None
-
                     return self._format_student_response(student)
                 return None
+
+            elif self.mysql_available:
+                success = self.mysql_service.update_student(student_id, update_data)
+                if success:
+                    student = self.mysql_service.get_student_by_id(student_id)
+                    if student is None:
+                        logger.error(f"❌ No se pudo recuperar estudiante actualizado {student_id}")
+                        return None
+                    return self._format_student_response(student)
+                return None
+
             else:
-                from ..models.schemas import StudentUpdate
-                student_update = StudentUpdate(**update_data)
-                student = self.student_service.update_student(db, student_id, student_update)
-                if student is None:
-                    return None
-                return self._format_student_response(student.__dict__)
+                logger.error("❌ No hay servicio de base de datos disponible")
+                return None
 
         except Exception as e:
             logger.error(f"❌ Error actualizando estudiante {student_id}: {e}")
@@ -259,8 +288,11 @@ class CloudflareAdapter:
             # Eliminar de base de datos
             if self.d1_available:
                 success = self.d1_service.delete_student(student_id)
+            elif self.mysql_available:
+                success = self.mysql_service.delete_student(student_id)
             else:
-                success = self.student_service.delete_student(db, student_id)
+                logger.error("❌ No hay servicio de base de datos disponible")
+                return False
 
             # Eliminar imagen si el estudiante fue eliminado exitosamente
             if success and student and student.get("imagen_path"):
@@ -288,11 +320,13 @@ class CloudflareAdapter:
             if self.d1_available:
                 log_id = self.d1_service.create_recognition_log(log_data)
                 return {"id": log_id, "success": True}
+            elif self.mysql_available:
+                log_id = self.mysql_service.create_recognition_log(log_data)
+                return {"id": log_id, "success": True}
             else:
-                from ..models.schemas import RecognitionLog
-                recognition_log = RecognitionLog(**log_data)
-                log = self.log_service.create_recognition_log(db, recognition_log)
-                return {"id": log.id, "success": True}
+                logger.error("❌ No hay servicio de base de datos disponible")
+                return {"success": False, "error": "No database service available"}
+
         except Exception as e:
             logger.error(f"❌ Error creando log: {e}")
             return {"success": False, "error": str(e)}
@@ -302,8 +336,17 @@ class CloudflareAdapter:
         try:
             if self.d1_available:
                 return self.d1_service.get_recognition_stats()
+            elif self.mysql_available:
+                return self.mysql_service.get_recognition_stats()
             else:
-                return self.log_service.get_recognition_stats(db)
+                logger.error("❌ No hay servicio de base de datos disponible")
+                return {
+                    "total_recognitions": 0,
+                    "successful_recognitions": 0,
+                    "failed_recognitions": 0,
+                    "success_rate": 0,
+                    "average_processing_time": 0
+                }
         except Exception as e:
             logger.error(f"❌ Error obteniendo stats: {e}")
             return {
@@ -377,15 +420,17 @@ class CloudflareAdapter:
             return None
 
     def get_system_status(self) -> Dict[str, Any]:
-        """Obtener estado del sistema Cloudflare"""
+        """Obtener estado del sistema"""
         return {
             "d1_enabled": self.use_d1,
             "d1_available": self.d1_available,
             "r2_enabled": self.use_r2,
             "r2_available": self.r2_available,
-            "fallback_mode": not (self.d1_available and self.r2_available),
+            "mysql_enabled": not self.use_d1,
+            "mysql_available": self.mysql_available,
+            "fallback_mode": not (self.d1_available or self.mysql_available),
             "services": {
-                "database": "Cloudflare D1" if self.d1_available else "SQLite Local",
+                "database": "Cloudflare D1" if self.d1_available else "MySQL Local" if self.mysql_available else "None",
                 "storage": "Cloudflare R2" if self.r2_available else "Local Storage"
             }
         }

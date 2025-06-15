@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 
 class StudentService:
-    """Servicio para operaciones CRUD de estudiantes - Compatible con D1 y SQLite"""
+    """Servicio para operaciones CRUD de estudiantes - Compatible con D1 y MySQL (NO SQLite)"""
 
     def __init__(self):
         self.use_d1 = is_d1_enabled()
@@ -23,7 +23,7 @@ class StudentService:
             if self.use_d1:
                 return self._create_student_d1(student_data)
             else:
-                return self._create_student_sqlite(db, student_data)
+                return self._create_student_mysql(db, student_data)
         except Exception as e:
             if not self.use_d1:
                 db.rollback()
@@ -69,26 +69,48 @@ class StudentService:
             logger.error(f"Error creando estudiante en D1: {e}")
             raise
 
-    def _create_student_sqlite(self, db: Session, student_data: StudentCreate) -> Student:
-        """Crear estudiante en SQLite"""
-        face_encoding = student_data.face_encoding
-        if isinstance(face_encoding, list):
-            face_encoding = face_encoding
+    def _create_student_mysql(self, db: Session, student_data: StudentCreate) -> Student:
+        """Crear estudiante en MySQL usando MySQLService directamente"""
+        try:
+            from ..services.mysql_service import MySQLService
+            mysql_service = MySQLService()
 
-        db_student = Student(
-            nombre=student_data.nombre,
-            apellidos=student_data.apellidos,
-            codigo=student_data.codigo,
-            correo=student_data.correo,
-            requisitoriado=student_data.requisitoriado,
-            imagen_path=student_data.imagen_path,
-            face_encoding=face_encoding
-        )
+            if not mysql_service.enabled:
+                raise Exception("MySQL service no disponible")
 
-        db.add(db_student)
-        db.commit()
-        db.refresh(db_student)
-        return db_student
+            # Convertir datos a formato MySQL
+            student_dict = {
+                "nombre": student_data.nombre,
+                "apellidos": student_data.apellidos,
+                "codigo": student_data.codigo,
+                "correo": student_data.correo,
+                "requisitoriado": student_data.requisitoriado,
+                "imagen_path": student_data.imagen_path,
+                "face_encoding": student_data.face_encoding
+            }
+
+            student_id = mysql_service.create_student(student_dict)
+
+            # Crear objeto Student para retornar
+            student = Student(
+                id=student_id,
+                nombre=student_data.nombre,
+                apellidos=student_data.apellidos,
+                codigo=student_data.codigo,
+                correo=student_data.correo,
+                requisitoriado=student_data.requisitoriado,
+                imagen_path=student_data.imagen_path,
+                face_encoding=student_data.face_encoding,
+                created_at=datetime.utcnow(),
+                updated_at=datetime.utcnow(),
+                active=True
+            )
+
+            return student
+
+        except Exception as e:
+            logger.error(f"Error creando estudiante en MySQL: {e}")
+            raise
 
     def get_student(self, db: Session, student_id: int) -> Optional[Student]:
         """Obtener estudiante por ID"""
@@ -96,10 +118,7 @@ class StudentService:
             if self.use_d1:
                 return self._get_student_d1(student_id)
             else:
-                return db.query(Student).filter(
-                    Student.id == student_id,
-                    Student.active == True
-                ).first()
+                return self._get_student_mysql(student_id)
         except Exception as e:
             logger.error(f"Error obteniendo estudiante {student_id}: {e}")
             return None
@@ -119,16 +138,31 @@ class StudentService:
             logger.error(f"Error obteniendo estudiante D1 {student_id}: {e}")
             return None
 
+    def _get_student_mysql(self, student_id: int) -> Optional[Student]:
+        """Obtener estudiante desde MySQL"""
+        try:
+            from ..services.mysql_service import MySQLService
+            mysql_service = MySQLService()
+
+            if not mysql_service.enabled:
+                return None
+
+            student_data = mysql_service.get_student_by_id(student_id)
+            if student_data:
+                return self._dict_to_student(student_data)
+            return None
+
+        except Exception as e:
+            logger.error(f"Error obteniendo estudiante MySQL {student_id}: {e}")
+            return None
+
     def get_student_by_codigo(self, db: Session, codigo: str) -> Optional[Student]:
         """Obtener estudiante por código"""
         try:
             if self.use_d1:
                 return self._get_student_by_codigo_d1(codigo)
             else:
-                return db.query(Student).filter(
-                    Student.codigo == codigo,
-                    Student.active == True
-                ).first()
+                return self._get_student_by_codigo_mysql(codigo)
         except Exception as e:
             logger.error(f"Error obteniendo estudiante por código {codigo}: {e}")
             return None
@@ -148,34 +182,23 @@ class StudentService:
             logger.error(f"Error obteniendo estudiante D1 por código {codigo}: {e}")
             return None
 
-    def get_students(self, db: Session, skip: int = 0, limit: int = 100) -> List[Student]:
-        """Obtener lista de estudiantes con paginación"""
+    def _get_student_by_codigo_mysql(self, codigo: str) -> Optional[Student]:
+        """Obtener estudiante por código desde MySQL"""
         try:
-            if self.use_d1:
-                return self._get_students_d1(skip, limit)
-            else:
-                return db.query(Student).filter(
-                    Student.active == True
-                ).offset(skip).limit(limit).all()
-        except Exception as e:
-            logger.error(f"Error obteniendo estudiantes: {e}")
-            return []
+            from ..services.mysql_service import MySQLService
+            mysql_service = MySQLService()
 
-    def _get_students_d1(self, skip: int = 0, limit: int = 100) -> List[Student]:
-        """Obtener estudiantes desde D1"""
-        try:
-            from ..services.cloudflare_d1 import CloudflareD1Service
-            d1_service = CloudflareD1Service()
+            if not mysql_service.enabled:
+                return None
 
-            students_data = d1_service.get_all_students()
-            students = [self._dict_to_student(data) for data in students_data]
-
-            # Aplicar paginación manual
-            return students[skip:skip + limit]
+            student_data = mysql_service.get_student_by_codigo(codigo)
+            if student_data:
+                return self._dict_to_student(student_data)
+            return None
 
         except Exception as e:
-            logger.error(f"Error obteniendo estudiantes D1: {e}")
-            return []
+            logger.error(f"Error obteniendo estudiante MySQL por código {codigo}: {e}")
+            return None
 
     def get_all_students(self, db: Session) -> List[Student]:
         """Obtener todos los estudiantes activos (para reconocimiento)"""
@@ -183,10 +206,7 @@ class StudentService:
             if self.use_d1:
                 return self._get_all_students_d1()
             else:
-                return db.query(Student).filter(
-                    Student.active == True,
-                    Student.face_encoding.isnot(None)
-                ).all()
+                return self._get_all_students_mysql()
         except Exception as e:
             logger.error(f"Error obteniendo todos los estudiantes: {e}")
             return []
@@ -204,8 +224,24 @@ class StudentService:
             logger.error(f"Error obteniendo todos los estudiantes D1: {e}")
             return []
 
+    def _get_all_students_mysql(self) -> List[Student]:
+        """Obtener todos los estudiantes desde MySQL"""
+        try:
+            from ..services.mysql_service import MySQLService
+            mysql_service = MySQLService()
+
+            if not mysql_service.enabled:
+                return []
+
+            students_data = mysql_service.get_all_students()
+            return [self._dict_to_student(data) for data in students_data if data.get('face_encoding')]
+
+        except Exception as e:
+            logger.error(f"Error obteniendo todos los estudiantes MySQL: {e}")
+            return []
+
     def _dict_to_student(self, data: dict) -> Student:
-        """Convertir diccionario de D1 a objeto Student"""
+        """Convertir diccionario de D1/MySQL a objeto Student"""
         import json
 
         # Convertir face_encoding de JSON string a lista
@@ -251,7 +287,7 @@ class StudentService:
             if self.use_d1:
                 return self._update_student_d1(student_id, student_data)
             else:
-                return self._update_student_sqlite(db, student_id, student_data)
+                return self._update_student_mysql(student_id, student_data)
         except Exception as e:
             if not self.use_d1:
                 db.rollback()
@@ -274,23 +310,25 @@ class StudentService:
             logger.error(f"Error actualizando estudiante D1 {student_id}: {e}")
             return None
 
-    def _update_student_sqlite(self, db: Session, student_id: int, student_data: StudentUpdate) -> Optional[Student]:
-        """Actualizar estudiante en SQLite"""
-        db_student = self.get_student(db, student_id)
-        if not db_student:
+    def _update_student_mysql(self, student_id: int, student_data: StudentUpdate) -> Optional[Student]:
+        """Actualizar estudiante en MySQL"""
+        try:
+            from ..services.mysql_service import MySQLService
+            mysql_service = MySQLService()
+
+            if not mysql_service.enabled:
+                return None
+
+            update_data = student_data.dict(exclude_unset=True)
+            success = mysql_service.update_student(student_id, update_data)
+
+            if success:
+                return self._get_student_mysql(student_id)
             return None
 
-        update_data = student_data.dict(exclude_unset=True)
-
-        for field, value in update_data.items():
-            if hasattr(db_student, field):
-                setattr(db_student, field, value)
-
-        db_student.updated_at = datetime.utcnow()
-
-        db.commit()
-        db.refresh(db_student)
-        return db_student
+        except Exception as e:
+            logger.error(f"Error actualizando estudiante MySQL {student_id}: {e}")
+            return None
 
     def delete_student(self, db: Session, student_id: int) -> bool:
         """Eliminar estudiante (soft delete)"""
@@ -300,54 +338,20 @@ class StudentService:
                 d1_service = CloudflareD1Service()
                 return d1_service.delete_student(student_id)
             else:
-                db_student = self.get_student(db, student_id)
-                if not db_student:
-                    return False
-
-                db_student.active = False
-                db_student.updated_at = datetime.utcnow()
-                db.commit()
-                return True
+                from ..services.mysql_service import MySQLService
+                mysql_service = MySQLService()
+                if mysql_service.enabled:
+                    return mysql_service.delete_student(student_id)
+                return False
 
         except Exception as e:
             if not self.use_d1:
                 db.rollback()
             raise e
 
-    def count_students(self, db: Session) -> Dict[str, int]:
-        """Contar estudiantes por categorías"""
-        try:
-            if self.use_d1:
-                students = self._get_all_students_d1()
-                total = len(students)
-                requisitoriados = sum(1 for s in students if s.requisitoriado)
-
-                return {
-                    "total": total,
-                    "activos": total,
-                    "requisitoriados": requisitoriados,
-                    "regulares": total - requisitoriados
-                }
-            else:
-                total = db.query(Student).filter(Student.active == True).count()
-                requisitoriados = db.query(Student).filter(
-                    Student.active == True,
-                    Student.requisitoriado == True
-                ).count()
-
-                return {
-                    "total": total,
-                    "activos": total,
-                    "requisitoriados": requisitoriados,
-                    "regulares": total - requisitoriados
-                }
-        except Exception as e:
-            logger.error(f"Error contando estudiantes: {e}")
-            return {"total": 0, "activos": 0, "requisitoriados": 0, "regulares": 0}
-
 
 class LogService:
-    """Servicio para logs de reconocimiento - Compatible con D1 y SQLite"""
+    """Servicio para logs de reconocimiento - Compatible con D1 y MySQL (NO SQLite)"""
 
     def __init__(self):
         self.use_d1 = is_d1_enabled()
@@ -358,7 +362,7 @@ class LogService:
             if self.use_d1:
                 return self._create_log_d1(log_data)
             else:
-                return self._create_log_sqlite(db, log_data)
+                return self._create_log_mysql(log_data)
         except Exception as e:
             if not self.use_d1:
                 db.rollback()
@@ -401,23 +405,44 @@ class LogService:
             logger.error(f"Error creando log D1: {e}")
             raise
 
-    def _create_log_sqlite(self, db: Session, log_data: RecognitionLog) -> RecognitionLogModel:
-        """Crear log en SQLite"""
-        db_log = RecognitionLogModel(
-            found=log_data.found,
-            student_id=log_data.student_id,
-            similarity=log_data.similarity,
-            confidence=log_data.confidence,
-            processing_time=log_data.processing_time,
-            image_path=log_data.image_path,
-            ip_address=log_data.ip_address,
-            user_agent=log_data.user_agent
-        )
+    def _create_log_mysql(self, log_data: RecognitionLog) -> RecognitionLogModel:
+        """Crear log en MySQL"""
+        try:
+            from ..services.mysql_service import MySQLService
+            mysql_service = MySQLService()
 
-        db.add(db_log)
-        db.commit()
-        db.refresh(db_log)
-        return db_log
+            if not mysql_service.enabled:
+                raise Exception("MySQL service no disponible")
+
+            log_dict = {
+                "found": log_data.found,
+                "student_id": log_data.student_id,
+                "similarity": log_data.similarity,
+                "confidence": log_data.confidence,
+                "processing_time": log_data.processing_time,
+                "image_path": log_data.image_path,
+                "ip_address": log_data.ip_address,
+                "user_agent": log_data.user_agent
+            }
+
+            log_id = mysql_service.create_recognition_log(log_dict)
+
+            return RecognitionLogModel(
+                id=log_id,
+                found=log_data.found,
+                student_id=log_data.student_id,
+                similarity=log_data.similarity,
+                confidence=log_data.confidence,
+                processing_time=log_data.processing_time,
+                image_path=log_data.image_path,
+                timestamp=datetime.utcnow(),
+                ip_address=log_data.ip_address,
+                user_agent=log_data.user_agent
+            )
+
+        except Exception as e:
+            logger.error(f"Error creando log MySQL: {e}")
+            raise
 
     def get_recognition_stats(self, db: Session) -> Dict[str, Any]:
         """Obtener estadísticas de reconocimiento"""
@@ -427,21 +452,16 @@ class LogService:
                 d1_service = CloudflareD1Service()
                 return d1_service.get_recognition_stats()
             else:
-                # SQLite original
-                total_logs = db.query(RecognitionLogModel).count()
-                successful = db.query(RecognitionLogModel).filter(
-                    RecognitionLogModel.found == True
-                ).count()
-                failed = total_logs - successful
-
-                avg_time = db.query(func.avg(RecognitionLogModel.processing_time)).scalar() or 0.0
-
+                from ..services.mysql_service import MySQLService
+                mysql_service = MySQLService()
+                if mysql_service.enabled:
+                    return mysql_service.get_recognition_stats()
                 return {
-                    "total_recognitions": total_logs,
-                    "successful_recognitions": successful,
-                    "failed_recognitions": failed,
-                    "success_rate": round((successful / total_logs * 100) if total_logs > 0 else 0, 2),
-                    "average_processing_time": round(avg_time, 2)
+                    "total_recognitions": 0,
+                    "successful_recognitions": 0,
+                    "failed_recognitions": 0,
+                    "success_rate": 0,
+                    "average_processing_time": 0
                 }
         except Exception as e:
             logger.error(f"Error obteniendo stats: {e}")
@@ -455,7 +475,7 @@ class LogService:
 
 
 class ConfigService:
-    """Servicio para configuración del sistema - Compatible con D1 y SQLite"""
+    """Servicio para configuración del sistema - Compatible con D1 y MySQL (NO SQLite)"""
 
     def __init__(self):
         self.use_d1 = is_d1_enabled()
@@ -467,13 +487,16 @@ class ConfigService:
                 # Para D1, usar variables de entorno
                 return float(os.getenv("RECOGNITION_THRESHOLD", "0.8"))
             else:
-                # Para SQLite, intentar usar system_config
+                # Para MySQL, intentar usar system_config si hay sesión DB
                 if db:
-                    config = db.query(SystemConfig).filter(
-                        SystemConfig.key == "recognition_threshold"
-                    ).first()
-                    if config:
-                        return float(config.value)
+                    try:
+                        config = db.query(SystemConfig).filter(
+                            SystemConfig.key == "recognition_threshold"
+                        ).first()
+                        if config:
+                            return float(config.value)
+                    except:
+                        pass  # Si falla, usar variable de entorno
                 return float(os.getenv("RECOGNITION_THRESHOLD", "0.8"))
         except Exception as e:
             logger.warning(f"Error obteniendo recognition_threshold: {e}")
@@ -486,11 +509,14 @@ class ConfigService:
                 return int(os.getenv("MAX_IMAGE_SIZE", "10485760"))
             else:
                 if db:
-                    config = db.query(SystemConfig).filter(
-                        SystemConfig.key == "max_image_size"
-                    ).first()
-                    if config:
-                        return int(config.value)
+                    try:
+                        config = db.query(SystemConfig).filter(
+                            SystemConfig.key == "max_image_size"
+                        ).first()
+                        if config:
+                            return int(config.value)
+                    except:
+                        pass
                 return int(os.getenv("MAX_IMAGE_SIZE", "10485760"))
         except Exception as e:
             logger.warning(f"Error obteniendo max_image_size: {e}")
@@ -504,11 +530,14 @@ class ConfigService:
                 return formats_str.split(",")
             else:
                 if db:
-                    config = db.query(SystemConfig).filter(
-                        SystemConfig.key == "allowed_formats"
-                    ).first()
-                    if config:
-                        return config.value.split(",")
+                    try:
+                        config = db.query(SystemConfig).filter(
+                            SystemConfig.key == "allowed_formats"
+                        ).first()
+                        if config:
+                            return config.value.split(",")
+                    except:
+                        pass
                 formats_str = os.getenv("ALLOWED_IMAGE_FORMATS", "jpg,jpeg,png,bmp")
                 return formats_str.split(",")
         except Exception as e:
