@@ -1,0 +1,38 @@
+# ==========================================
+# NIXPACKS.TOML PARA RAILWAY
+# Configuración para reconocimiento facial académico
+# ==========================================
+
+[phases.setup]
+nixPkgs = [
+    "python39",
+    "gcc",
+    "cmake",
+    "pkg-config",
+    "libopencv4",
+    "opencv4",
+    "openblas",
+    "lapack",
+    "boost",
+    "wget",
+    "curl"
+]
+
+[phases.install]
+cmds = [
+    "pip install --upgrade pip",
+    "pip install -r requirements.txt"
+]
+
+[phases.build]
+cmds = [
+    "mkdir -p dlib_models models temp_uploads",
+    "python setup_dlib_models.py"
+]
+
+[start]
+cmd = "python app.py"
+
+[variables]
+PYTHONUNBUFFERED = "1"
+PYTHONDONTWRITEBYTECODE = "1"

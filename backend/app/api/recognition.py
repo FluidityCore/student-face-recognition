@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Request
 from sqlalchemy.orm import Session
 from typing import Dict, Any
 import os
@@ -19,8 +19,10 @@ image_processor = ImageProcessor()
 
 @router.post("/recognize", response_model=RecognitionResult)
 async def recognize_student(
+        request: Request,
         image: UploadFile = File(...),
         db: Session = Depends(get_db)
+
 ):
     """
     Reconocer estudiante a partir de una imagen
@@ -84,7 +86,9 @@ async def recognize_student(
             "similarity": recognition_result.get("similarity", 0.0),
             "confidence": recognition_result.get("confidence", "Baja"),
             "processing_time": processing_time,
-            "image_path": temp_image_path
+            "image_path": temp_image_path,
+            "ip_address": request.client.host if hasattr(request, 'client') and request.client else None,
+            "user_agent": request.headers.get("user-agent") if hasattr(request, 'headers') else None
         }
 
         adapter.create_recognition_log(db, log_data)

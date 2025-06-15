@@ -69,8 +69,8 @@ class CloudflareAdapter:
             image_url = None
             if image_file:
                 if self.r2_available:
-                    # Subir a R2
-                    image_url = self.r2_service.upload_image(image_file, "students")
+                    # ✅ FIX: Subir a R2 con await
+                    image_url = await self.r2_service.upload_image(image_file, "students")
                 else:
                     # Guardar localmente
                     from ..utils.image_processing import ImageProcessor
