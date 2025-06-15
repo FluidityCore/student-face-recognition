@@ -22,11 +22,8 @@ async def recognize_student(
         request: Request,
         image: UploadFile = File(...),
         db: Session = Depends(get_db)
-
 ):
-    """
-    Reconocer estudiante a partir de una imagen
-    """
+    """Reconocer estudiante a partir de una imagen - FIX ASYNC"""
     start_time = time.time()
     temp_image_path = None
 
@@ -47,16 +44,16 @@ async def recognize_student(
                 os.remove(temp_image_path)
             raise HTTPException(status_code=400, detail="No se detectó un rostro en la imagen")
 
-        # Usar adapter para obtener estudiantes
-        students = adapter.get_all_students(db)
+        # ✅ FIX: Usar método async para obtener estudiantes
+        students_data = await adapter.get_all_students_async(db)
 
-        if not students:
+        if not students_data:
             raise HTTPException(status_code=404, detail="No hay estudiantes registrados en el sistema")
 
         # Convertir students dict a objetos Student para face_service
         from ..models.database import Student
         student_objects = []
-        for student_data in students:
+        for student_data in students_data:
             # Crear objeto Student temporal para reconocimiento
             student_obj = Student(
                 id=student_data['id'],
@@ -79,7 +76,7 @@ async def recognize_student(
         # Calcular tiempo de procesamiento
         processing_time = time.time() - start_time
 
-        # Usar adapter para logs
+        # Crear log de reconocimiento
         log_data = {
             "found": recognition_result["found"],
             "student_id": recognition_result.get("student", {}).get("id") if recognition_result["found"] else None,
@@ -118,10 +115,8 @@ async def recognize_student(
 
 
 @router.get("/recognition/stats")
-def get_recognition_stats(db: Session = Depends(get_db)):
-    """
-    Obtener estadísticas de reconocimiento
-    """
+async def get_recognition_stats(db: Session = Depends(get_db)):
+    """Obtener estadísticas de reconocimiento - FIX ASYNC"""
     try:
         stats = adapter.get_recognition_stats(db)
         return stats
@@ -130,15 +125,15 @@ def get_recognition_stats(db: Session = Depends(get_db)):
 
 
 @router.get("/recognition/logs")
-def get_recognition_logs(
+async def get_recognition_logs(
         skip: int = 0,
         limit: int = 50,
         db: Session = Depends(get_db)
 ):
-    """
-    Obtener logs de reconocimiento
-    """
+    """Obtener logs de reconocimiento - FIX ASYNC"""
     try:
+        # Nota: Este método puede permanecer síncrono por ahora
+        # ya que usa el log_service directamente
         logs = adapter.log_service.get_recognition_logs(db, skip=skip, limit=limit)
         return logs
     except Exception as e:
@@ -146,10 +141,8 @@ def get_recognition_logs(
 
 
 @router.get("/health")
-def health_check():
-    """
-    Endpoint para verificar que la API está funcionando
-    """
+async def health_check():
+    """Endpoint para verificar que la API está funcionando - FIX ASYNC"""
     return {
         "status": "ok",
         "message": "API de reconocimiento facial funcionando correctamente",

@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 
 class CloudflareAdapter:
-    """Adaptador unificado para usar Cloudflare D1 + R2 o MySQL + Local"""
+    """Adaptador unificado con métodos async - FIX"""
 
     def __init__(self):
         """Inicializar adaptador"""
@@ -23,8 +23,6 @@ class CloudflareAdapter:
         # Inicializar servicios
         self.d1_service = CloudflareD1Service() if self.use_d1 else None
         self.r2_service = CloudflareR2Service() if self.use_r2 else None
-
-        # CAMBIO: MySQL service en lugar de servicios SQLite genéricos
         self.mysql_service = MySQLService() if not self.use_d1 else None
 
         # Verificar disponibilidad
@@ -32,47 +30,38 @@ class CloudflareAdapter:
         self.r2_available = self.r2_service and self.r2_service.is_available()
         self.mysql_available = self.mysql_service and self.mysql_service.enabled
 
-        # Log de configuración
-        logger.info(f"🔧 Cloudflare D1: {'✅ Habilitado' if self.d1_available else '❌ Deshabilitado'}")
-        logger.info(f"🔧 Cloudflare R2: {'✅ Habilitado' if self.r2_available else '❌ Deshabilitado'}")
-        logger.info(f"🔧 MySQL Local: {'✅ Habilitado' if self.mysql_available else '❌ Deshabilitado'}")
-
         if self.d1_available:
             self._initialize_d1()
         elif self.mysql_available:
-            logger.info("💾 Usando MySQL como base de datos principal")
+            logger.info("💾 Using MySQL as main database")
 
     def _initialize_d1(self) -> bool:
         """Inicializar base de datos D1"""
         try:
             if self.d1_service.test_connection():
                 self.d1_service.initialize_database()
-                logger.info("✅ Cloudflare D1 inicializado")
+                logger.info("✅ Cloudflare D1 initialized")
                 return True
             else:
-                logger.error("❌ No se pudo conectar a D1")
+                logger.error("❌ Could not connect to D1")
                 return False
         except Exception as e:
-            logger.error(f"❌ Error inicializando D1: {e}")
+            logger.error(f"❌ Error initializing D1: {e}")
             return False
 
     # ==========================================
-    # MÉTODOS PARA ESTUDIANTES
+    # ✅ FIX: MÉTODOS ASYNC PARA ESTUDIANTES
     # ==========================================
 
-    async def create_student(self, db: Session, student_data: Dict[str, Any], image_file: UploadFile = None) -> Dict[
-        str, Any]:
-        """Crear estudiante usando D1 + R2 o MySQL + Local"""
-        logger.info(f"🟣 create_student called. D1: {self.d1_available}, MySQL: {self.mysql_available}")
+    async def create_student_async(self, db: Session, student_data: Dict[str, Any], image_file: UploadFile = None) -> Dict[str, Any]:
+        """✅ FIX: Método async para crear estudiante"""
         try:
             # Subir imagen si se proporciona
             image_url = None
             if image_file:
                 if self.r2_available:
-                    # ✅ FIX: Subir a R2 con await
                     image_url = await self.r2_service.upload_image(image_file, "students")
                 else:
-                    # Guardar localmente
                     from ..utils.image_processing import ImageProcessor
                     image_processor = ImageProcessor()
                     image_url = await image_processor.save_image(image_file, "reference")
@@ -81,31 +70,29 @@ class CloudflareAdapter:
 
             # Crear estudiante en base de datos
             if self.d1_available:
-                # Usar D1
                 student_id = self.d1_service.create_student(student_data)
                 student = self.d1_service.get_student_by_id(student_id)
 
                 if student is None:
-                    raise Exception(f"No se pudo recuperar el estudiante creado con ID {student_id}")
+                    raise Exception(f"Could not retrieve created student with ID {student_id}")
 
                 return self._format_student_response(student)
 
             elif self.mysql_available:
-                # Usar MySQL
                 student_id = self.mysql_service.create_student(student_data)
                 student = self.mysql_service.get_student_by_id(student_id)
 
                 if student is None:
-                    raise Exception(f"No se pudo recuperar el estudiante creado con ID {student_id}")
+                    raise Exception(f"Could not retrieve created student with ID {student_id}")
 
                 return self._format_student_response(student)
 
             else:
-                raise Exception("No hay servicio de base de datos disponible")
+                raise Exception("No database service available")
 
         except Exception as e:
-            logger.error(f"❌ Error creando estudiante: {e}")
-            # Limpiar imagen si hubo error
+            logger.error(f"❌ Error creating student: {e}")
+            # Cleanup image if error
             if image_url:
                 if self.r2_available:
                     self.r2_service.delete_file(image_url)
@@ -116,19 +103,11 @@ class CloudflareAdapter:
                         pass
             raise
 
-    def get_all_students(self, db: Session) -> List[Dict[str, Any]]:
-        """Obtener todos los estudiantes"""
-        logger.info(f"🟢 get_all_students called. D1: {self.d1_available}, MySQL: {self.mysql_available}")
-
+    async def get_all_students_async(self, db: Session) -> List[Dict[str, Any]]:
+        """✅ FIX: Método async para obtener todos los estudiantes"""
         try:
             if self.d1_available:
-                logger.info("🔍 Obteniendo estudiantes desde Cloudflare D1...")
                 students_raw = self.d1_service.get_all_students()
-                logger.info(f"📊 D1 raw response: {len(students_raw)} estudiantes")
-
-                if not students_raw:
-                    logger.warning("⚠️ D1 devolvió array vacío")
-
                 students = []
                 for student_data in students_raw:
                     try:
@@ -136,17 +115,13 @@ class CloudflareAdapter:
                         if formatted:
                             students.append(formatted)
                     except Exception as e:
-                        logger.error(f"❌ Error formateando estudiante {student_data}: {e}")
+                        logger.error(f"❌ Error formatting student {student_data}: {e}")
                         continue
 
-                logger.info(f"✅ Estudiantes D1 formateados: {len(students)}")
                 return students
 
             elif self.mysql_available:
-                logger.info("🔍 Obteniendo estudiantes desde MySQL...")
                 students_raw = self.mysql_service.get_all_students()
-                logger.info(f"📊 MySQL raw response: {len(students_raw)} estudiantes")
-
                 students = []
                 for student_data in students_raw:
                     try:
@@ -154,76 +129,70 @@ class CloudflareAdapter:
                         if formatted:
                             students.append(formatted)
                     except Exception as e:
-                        logger.error(f"❌ Error formateando estudiante {student_data}: {e}")
+                        logger.error(f"❌ Error formatting student {student_data}: {e}")
                         continue
 
-                logger.info(f"✅ Estudiantes MySQL formateados: {len(students)}")
                 return students
 
             else:
-                logger.error("❌ No hay servicio de base de datos disponible")
+                logger.error("❌ No database service available")
                 return []
 
         except Exception as e:
-            logger.error(f"❌ Error obteniendo estudiantes: {e}")
+            logger.error(f"❌ Error getting students: {e}")
             return []
 
-    def get_student_by_id(self, db: Session, student_id: int) -> Optional[Dict[str, Any]]:
-        """Obtener estudiante por ID"""
+    async def get_student_by_id_async(self, db: Session, student_id: int) -> Optional[Dict[str, Any]]:
+        """✅ FIX: Método async para obtener estudiante por ID"""
         try:
             if self.d1_available:
                 student = self.d1_service.get_student_by_id(student_id)
                 if student is None:
-                    logger.warning(f"⚠️ Estudiante {student_id} no encontrado en D1")
                     return None
                 return self._format_student_response(student)
 
             elif self.mysql_available:
                 student = self.mysql_service.get_student_by_id(student_id)
                 if student is None:
-                    logger.warning(f"⚠️ Estudiante {student_id} no encontrado en MySQL")
                     return None
                 return self._format_student_response(student)
 
             else:
-                logger.error("❌ No hay servicio de base de datos disponible")
+                logger.error("❌ No database service available")
                 return None
 
         except Exception as e:
-            logger.error(f"❌ Error obteniendo estudiante {student_id}: {e}")
+            logger.error(f"❌ Error getting student {student_id}: {e}")
             return None
 
-    def get_student_by_codigo(self, db: Session, codigo: str) -> Optional[Dict[str, Any]]:
-        """Obtener estudiante por código"""
+    async def get_student_by_codigo_async(self, db: Session, codigo: str) -> Optional[Dict[str, Any]]:
+        """✅ FIX: Método async para obtener estudiante por código"""
         try:
             if self.d1_available:
                 student = self.d1_service.get_student_by_codigo(codigo)
                 if student is None:
-                    logger.warning(f"⚠️ Estudiante con código {codigo} no encontrado en D1")
                     return None
                 return self._format_student_response(student)
 
             elif self.mysql_available:
                 student = self.mysql_service.get_student_by_codigo(codigo)
                 if student is None:
-                    logger.warning(f"⚠️ Estudiante con código {codigo} no encontrado en MySQL")
                     return None
                 return self._format_student_response(student)
 
             else:
-                logger.error("❌ No hay servicio de base de datos disponible")
+                logger.error("❌ No database service available")
                 return None
 
         except Exception as e:
-            logger.error(f"❌ Error obteniendo estudiante por código {codigo}: {e}")
+            logger.error(f"❌ Error getting student by codigo {codigo}: {e}")
             return None
 
-    async def update_student(self, db: Session, student_id: int, update_data: Dict[str, Any],
-                             image_file: UploadFile = None) -> Optional[Dict[str, Any]]:
-        """Actualizar estudiante"""
+    async def update_student_async(self, db: Session, student_id: int, update_data: Dict[str, Any], image_file: UploadFile = None) -> Optional[Dict[str, Any]]:
+        """✅ FIX: Método async para actualizar estudiante"""
         try:
             # Obtener estudiante actual
-            current_student = self.get_student_by_id(db, student_id)
+            current_student = await self.get_student_by_id_async(db, student_id)
             if not current_student:
                 return None
 
@@ -256,7 +225,7 @@ class CloudflareAdapter:
                 if success:
                     student = self.d1_service.get_student_by_id(student_id)
                     if student is None:
-                        logger.error(f"❌ No se pudo recuperar estudiante actualizado {student_id}")
+                        logger.error(f"❌ Could not retrieve updated student {student_id}")
                         return None
                     return self._format_student_response(student)
                 return None
@@ -266,24 +235,24 @@ class CloudflareAdapter:
                 if success:
                     student = self.mysql_service.get_student_by_id(student_id)
                     if student is None:
-                        logger.error(f"❌ No se pudo recuperar estudiante actualizado {student_id}")
+                        logger.error(f"❌ Could not retrieve updated student {student_id}")
                         return None
                     return self._format_student_response(student)
                 return None
 
             else:
-                logger.error("❌ No hay servicio de base de datos disponible")
+                logger.error("❌ No database service available")
                 return None
 
         except Exception as e:
-            logger.error(f"❌ Error actualizando estudiante {student_id}: {e}")
+            logger.error(f"❌ Error updating student {student_id}: {e}")
             raise
 
-    def delete_student(self, db: Session, student_id: int) -> bool:
-        """Eliminar estudiante"""
+    async def delete_student_async(self, db: Session, student_id: int) -> bool:
+        """✅ FIX: Método async para eliminar estudiante"""
         try:
             # Obtener estudiante para eliminar imagen
-            student = self.get_student_by_id(db, student_id)
+            student = await self.get_student_by_id_async(db, student_id)
 
             # Eliminar de base de datos
             if self.d1_available:
@@ -291,7 +260,7 @@ class CloudflareAdapter:
             elif self.mysql_available:
                 success = self.mysql_service.delete_student(student_id)
             else:
-                logger.error("❌ No hay servicio de base de datos disponible")
+                logger.error("❌ No database service available")
                 return False
 
             # Eliminar imagen si el estudiante fue eliminado exitosamente
@@ -307,8 +276,27 @@ class CloudflareAdapter:
             return success
 
         except Exception as e:
-            logger.error(f"❌ Error eliminando estudiante {student_id}: {e}")
+            logger.error(f"❌ Error deleting student {student_id}: {e}")
             return False
+
+    # ==========================================
+    # MÉTODOS SÍNCRONOS ORIGINALES (mantener compatibilidad)
+    # ==========================================
+
+    def get_all_students(self, db: Session) -> List[Dict[str, Any]]:
+        """Método síncrono original - mantener para compatibilidad"""
+        import asyncio
+        return asyncio.run(self.get_all_students_async(db))
+
+    def get_student_by_id(self, db: Session, student_id: int) -> Optional[Dict[str, Any]]:
+        """Método síncrono original - mantener para compatibilidad"""
+        import asyncio
+        return asyncio.run(self.get_student_by_id_async(db, student_id))
+
+    def get_student_by_codigo(self, db: Session, codigo: str) -> Optional[Dict[str, Any]]:
+        """Método síncrono original - mantener para compatibilidad"""
+        import asyncio
+        return asyncio.run(self.get_student_by_codigo_async(db, codigo))
 
     # ==========================================
     # MÉTODOS PARA LOGS DE RECONOCIMIENTO
@@ -324,11 +312,11 @@ class CloudflareAdapter:
                 log_id = self.mysql_service.create_recognition_log(log_data)
                 return {"id": log_id, "success": True}
             else:
-                logger.error("❌ No hay servicio de base de datos disponible")
+                logger.error("❌ No database service available")
                 return {"success": False, "error": "No database service available"}
 
         except Exception as e:
-            logger.error(f"❌ Error creando log: {e}")
+            logger.error(f"❌ Error creating log: {e}")
             return {"success": False, "error": str(e)}
 
     def get_recognition_stats(self, db: Session) -> Dict[str, Any]:
@@ -339,7 +327,6 @@ class CloudflareAdapter:
             elif self.mysql_available:
                 return self.mysql_service.get_recognition_stats()
             else:
-                logger.error("❌ No hay servicio de base de datos disponible")
                 return {
                     "total_recognitions": 0,
                     "successful_recognitions": 0,
@@ -348,7 +335,7 @@ class CloudflareAdapter:
                     "average_processing_time": 0
                 }
         except Exception as e:
-            logger.error(f"❌ Error obteniendo stats: {e}")
+            logger.error(f"❌ Error getting stats: {e}")
             return {
                 "total_recognitions": 0,
                 "successful_recognitions": 0,
