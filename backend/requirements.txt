@@ -1,17 +1,15 @@
 # ==========================================
-# REQUIREMENTS PARA RAILWAY DEPLOYMENT
+# REQUIREMENTS OPTIMIZADO PARA RAILWAY - FIX CRASH
 # ==========================================
 
 # FastAPI y servidor web
 fastapi>=0.104.0
 uvicorn[standard]>=0.24.0
-gunicorn>=21.2.0
 python-multipart>=0.0.6
 
 # Base de datos - MySQL + D1
 sqlalchemy>=2.0.20
-alembic>=1.12.0
-# AGREGADO: MySQL driver (requerido por imports aunque use D1)
+# CRITICAL: MySQL driver (requerido por imports)
 pymysql>=1.1.0
 cryptography>=41.0.0
 
@@ -19,35 +17,56 @@ cryptography>=41.0.0
 boto3>=1.34.0
 botocore>=1.34.0
 
-# Procesamiento de imágenes y ML
+# ==========================================
+# PROCESAMIENTO DE IMÁGENES - OPTIMIZADO RAILWAY
+# ==========================================
+
+# ✅ FIX: PIL/Pillow primero (más ligero)
 pillow>=10.0.0
+
+# ✅ FIX: OpenCV headless (sin GUI dependencies)
 opencv-python-headless>=4.8.0
-numpy>=1.24.0
-scikit-learn>=1.3.0
+
+# ✅ FIX: NumPy optimizado
+numpy>=1.24.0,<1.26.0
+
+# ✅ FIX: Scikit-learn específico
+scikit-learn>=1.3.0,<1.4.0
 
 # ==========================================
-# RECONOCIMIENTO FACIAL ACADÉMICO
+# RECONOCIMIENTO FACIAL ACADÉMICO - OPTIMIZADO
 # ==========================================
 
-# CORE: dlib para implementación académica
-dlib>=19.22.0
+# ✅ FIX: dlib específico para Railway (evitar compilación)
+dlib>=19.22.0,<19.25.0
 
 # ==========================================
-# UTILIDADES
+# UTILIDADES CORE
 # ==========================================
 
 python-dotenv>=1.0.0
-python-jose[cryptography]>=3.3.0
-passlib[bcrypt]>=1.7.4
 pydantic>=2.5.0
-pydantic-settings>=2.0.0
 httpx>=0.25.0
 requests>=2.31.0
-psutil>=5.9.0
 
 # ==========================================
-# COMANDOS PARA RAILWAY
+# RAILWAY SPECIFIC OPTIMIZATIONS
 # ==========================================
 
-# Build Command: (automático con nixpacks.toml)
-# Start Command: python app.py
+# ✅ FIX: Remover psutil que puede causar problemas
+# psutil>=5.9.0  # Comentado para Railway
+
+# ✅ FIX: Remover dependencias pesadas innecesarias
+# gunicorn>=21.2.0  # No necesario con uvicorn
+# python-jose[cryptography]>=3.3.0  # No usado actualmente
+# passlib[bcrypt]>=1.7.4  # No usado actualmente
+
+# ==========================================
+# NOTAS PARA RAILWAY DEPLOYMENT
+# ==========================================
+
+# 1. ✅ Versiones específicas para evitar conflictos
+# 2. ✅ OpenCV headless para evitar problemas de GUI
+# 3. ✅ dlib sin compilación extra
+# 4. ✅ Dependencias mínimas para reducir tiempo de build
+# 5. ✅ NumPy compatible con Railway
