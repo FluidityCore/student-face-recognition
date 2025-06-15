@@ -349,10 +349,9 @@ class CloudflareAdapter:
     # ==========================================
 
     def _format_student_response(self, student_data: Union[Dict, Any]) -> Optional[Dict[str, Any]]:
-        """Formatear respuesta de estudiante"""
-        # Manejar None correctamente
+        """Formatear respuesta de estudiante - FIX EMAIL VALIDATION"""
         if student_data is None:
-            logger.warning("⚠️ _format_student_response recibió None")
+            logger.warning("⚠️ _format_student_response received None")
             return None
 
         # Verificar que tenemos datos válidos
@@ -361,7 +360,7 @@ class CloudflareAdapter:
         elif hasattr(student_data, '__dict__'):
             data = student_data.__dict__.copy()
         else:
-            logger.error(f"❌ Tipo de datos no válido para estudiante: {type(student_data)}")
+            logger.error(f"❌ Invalid data type for student: {type(student_data)}")
             return None
 
         # Verificar campos obligatorios
@@ -369,8 +368,17 @@ class CloudflareAdapter:
         missing_fields = [field for field in required_fields if field not in data or data[field] is None]
 
         if missing_fields:
-            logger.error(f"❌ Campos obligatorios faltantes en estudiante: {missing_fields}")
+            logger.error(f"❌ Missing required fields in student: {missing_fields}")
             return None
+
+        # ✅ FIX: Limpiar email antes de validation
+        correo = data.get('correo')
+        if correo and '@' not in str(correo):
+            # Si no es un email válido, convertir a None
+            data['correo'] = None
+        elif correo:
+            # Si es válido, normalizar
+            data['correo'] = str(correo).strip().lower()
 
         # Parsear face_encoding si es string JSON
         if isinstance(data.get("face_encoding"), str):
@@ -378,7 +386,7 @@ class CloudflareAdapter:
                 import json
                 data["face_encoding"] = json.loads(data["face_encoding"])
             except Exception as e:
-                logger.warning(f"⚠️ Error parseando face_encoding: {e}")
+                logger.warning(f"⚠️ Error parsing face_encoding: {e}")
                 data["face_encoding"] = None
 
         # Asegurar tipos correctos
@@ -390,7 +398,6 @@ class CloudflareAdapter:
                         from datetime import datetime
                         data[date_field] = datetime.fromisoformat(data[date_field].replace('Z', '+00:00'))
                     except:
-                        # Si no se puede parsear, usar datetime actual
                         from datetime import datetime
                         data[date_field] = datetime.utcnow()
 
@@ -403,9 +410,9 @@ class CloudflareAdapter:
             return data
 
         except Exception as e:
-            logger.error(f"❌ Error formateando datos de estudiante: {e}")
+            logger.error(f"❌ Error formatting student data: {e}")
             return None
-
+        
     def get_system_status(self) -> Dict[str, Any]:
         """Obtener estado del sistema"""
         return {

@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr, validator
+from pydantic import BaseModel, validator
 from typing import Optional, List, Dict, Any
 from datetime import datetime
 
@@ -26,9 +26,16 @@ class StudentBase(BaseModel):
 
     @validator('correo')
     def validate_correo(cls, v):
-        if v and '@' not in v:
-            raise ValueError('Formato de correo inválido')
-        return v.strip().lower() if v else None
+        # ✅ FIX: Validación más flexible - permite None, vacío o email válido
+        if not v or v.strip() == '':
+            return None
+
+        # Solo validar formato si tiene contenido
+        if '@' not in v:
+            # ✅ FIX: En lugar de error, normalizar valores inválidos
+            return None  # O podrías retornar v si quieres mantener el valor original
+
+        return v.strip().lower()
 
 
 class StudentCreate(StudentBase):
@@ -59,14 +66,32 @@ class StudentUpdate(BaseModel):
             raise ValueError('El código debe tener al menos 3 caracteres')
         return v.strip().upper() if v else v
 
+    @validator('correo')
+    def validate_correo(cls, v):
+        # ✅ FIX: Validación flexible para updates también
+        if not v or v.strip() == '':
+            return None
+        if '@' not in v:
+            return None
+        return v.strip().lower()
+
 
 class StudentResponse(StudentBase):
-    """Schema para respuesta de estudiante"""
+    """Schema para respuesta de estudiante - FIX VALIDATION"""
     id: int
     imagen_path: Optional[str] = None
     created_at: datetime
     updated_at: datetime
     active: bool
+
+    # ✅ FIX: Override validator para ser más permisivo en responses
+    @validator('correo')
+    def validate_correo_response(cls, v):
+        # Para responses, ser muy permisivo
+        if not v:
+            return None
+        # No validar formato en responses, solo limpiar
+        return str(v).strip() if v else None
 
     class Config:
         from_attributes = True
